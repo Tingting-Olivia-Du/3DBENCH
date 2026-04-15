@@ -1,1 +1,3 @@
 LIBERO/
+__pycache__/
+*.pyc
