@@ -1,0 +1,57 @@
+# VLM Spatial Reasoning Benchmark Configuration
+
+# Data settings
+data:
+  benchmark_name: "libero_spatial"
+  num_tasks: 10
+  samples_per_task: 5
+  total_samples: 50
+  image_size: 256
+  seed: 42
+
+# Output directories
+paths:
+  data_dir: "data"
+  images_dir: "data/images"
+  ground_truth_dir: "data/ground_truth"
+  results_dir: "results"
+
+# Coordinate system (from robosuite documentation)
+coordinate_system:
+  origin: "robot_base_center"
+  x_axis: "forward (+X = away from robot base)"
+  y_axis: "left (+Y = robot's left side)"
+  z_axis: "up (+Z = upward)"
+  unit: "meters"
+  table_height: 0.8
+  workspace:
+    x_range: [0.3, 0.7]
+    y_range: [-0.3, 0.3]
+    z_range: [0.8, 1.2]
+
+# Evaluation thresholds
+evaluation:
+  grasp_distance_threshold: 0.045  # 4.5cm
+  coordinate_accuracy_thresholds:
+    good: 0.03   # < 3cm
+    acceptable: 0.05  # < 5cm
+    poor: 0.10  # < 10cm
+  direction_angle_thresholds:
+    good: 15  # < 15 degrees
+    acceptable: 30  # < 30 degrees
+    poor: 45  # < 45 degrees
+
+# VLM settings
+vlm:
+  model_name: "Qwen/Qwen2.5-VL-7B-Instruct"
+  use_api: false
+  api_base: null
+  api_key: null
+  device: "cuda"
+  max_new_tokens: 512
+
+# Question types to evaluate
+questions:
+  - object_localization  # Q1: Estimate target object coordinates
+  - gripper_close        # Q2: Judge if gripper can close
+  - move_direction       # Q3: Predict next move direction
