@@ -26,7 +26,6 @@ PYTHON_VER="3.12"    # lerobot requires >=3.12
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"          # /umd-datapool/tingting
 LIBERO_DIR="${REPO_ROOT}/LIBERO"
-LEROBOT_DIR="${SCRIPT_DIR}/lerobot"
 BENCH_DIR="$SCRIPT_DIR"
 
 # ---------- argument parsing --------------------------------
@@ -62,13 +61,6 @@ else
   SKIP_LIBERO=0
 fi
 
-if [[ ! -d "$LEROBOT_DIR" ]]; then
-  warn "LeRobot repo not found at $LEROBOT_DIR — LeRobot install will be skipped."
-  SKIP_LEROBOT=1
-else
-  ok "LeRobot repo: $LEROBOT_DIR"
-  SKIP_LEROBOT=0
-fi
 
 # ---------- create / reuse env ------------------------------
 log "Setting up conda env: $ENV_PREFIX  (Python $PYTHON_VER)"
@@ -114,16 +106,8 @@ ok "PyTorch 2.10.0+cu128 installed."
 #   gymnasium, hydra-core, easydict, einops, opencv-python, etc.
 log "Step 2/5 — LeRobot + LIBERO (lerobot[libero])"
 
-if [[ "$SKIP_LEROBOT" -eq 0 ]]; then
-  pip install --cache-dir "$PIP_CACHE" \
-      -e "${LEROBOT_DIR}[libero]"
-  ok "LeRobot + hf-libero installed from $LEROBOT_DIR"
-else
-  # Fall back: install hf-libero directly (still brings all LIBERO deps)
-  warn "LeRobot repo not found — installing hf-libero directly from PyPI."
-  pip install --cache-dir "$PIP_CACHE" "hf-libero>=0.1.3"
-  ok "hf-libero installed."
-fi
+pip install --cache-dir "$PIP_CACHE" "lerobot[libero]"
+ok "LeRobot + hf-libero installed from PyPI."
 
 # If a local LIBERO repo also exists, install it on top so local edits take effect.
 if [[ "$SKIP_LIBERO" -eq 0 ]]; then
