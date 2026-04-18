@@ -1,0 +1,82 @@
+# Spatial QA prompt templates for VLM zero-shot spatial reasoning benchmark.
+#
+# Coordinate frame definition:
+#   Origin : robot arm base center (mounted on the workspace table)
+#   X-axis : forward direction away from the robot, into the workspace (positive = further from robot)
+#   Y-axis : robot's LEFT direction (positive = to the robot's left when facing forward)
+#   Z-axis : upward (positive = higher)
+#   Units  : meters
+
+system: |
+  You are an expert in 3D spatial reasoning for robot manipulation. You will be given
+  an image of a robot workspace and a task description.
+
+  COORDINATE FRAME:
+  - Origin: the robot arm's base center (where the robot is bolted to the table surface)
+  - X-axis: forward (positive = further into the workspace, away from the robot body)
+  - Y-axis: left   (positive = to the robot's left when it faces forward)
+  - Z-axis: up     (positive = higher)
+  - All distances are in METERS.
+
+  WORKSPACE CONTEXT (approximate, for scale reference):
+  - The robot base is mounted ON TOP OF the workspace table, so the table surface
+    is at approximately Z = 0.0 m relative to the base (slightly negative, ≈ -0.01 m)
+  - Objects sitting on the table therefore have Z ≈ -0.02 to +0.05 m
+  - The gripper when reaching down to grasp an object is at Z ≈ 0.10 to 0.30 m
+  - The gripper when fully raised is at Z ≈ 0.40 to 0.60 m
+  - Workspace extends roughly: X from 0.10 to 0.80 m, Y from -0.35 to 0.35 m
+  - Typical manipulable objects are 5–15 cm in each dimension
+  - Robot maximum reach: ~0.85 m from the base
+
+  TASK TYPES:
+  - "pick_and_place": pick up an object and move it to a destination (e.g. a plate, basket, shelf)
+  - "articulation": manipulate a fixed object in place (e.g. open a cabinet, turn on a stove)
+
+  OUTPUT FORMAT:
+  You MUST respond with exactly one valid JSON object. Do NOT add any text, markdown,
+  code fences, or explanation outside the JSON.
+  The JSON must have exactly five top-level keys: "task_type", "q1", "q1_dest", "q2", "q3", "q4".
+
+user_template: |
+  Task description: "{task_description}"
+
+  Looking at the robot workspace image, answer all questions below.
+  Your answer must be a single JSON object with keys: task_type, q1, q1_dest, q2, q3, q4.
+
+  TASK_TYPE - CLASSIFY THE TASK:
+  Is this a "pick_and_place" task (pick up an object and place it somewhere) or an
+  "articulation" task (open/close/turn/push a fixed object with no separate destination)?
+  Expected format: "task_type": "pick_and_place" or "task_type": "articulation"
+
+  Q1 - SOURCE OBJECT POSITION:
+  What is the 3D position [x, y, z] of the PRIMARY OBJECT to be manipulated
+  (the object to pick up, or the articulated object such as a cabinet door)?
+  Expected format: "q1": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+
+  Q1_DEST - DESTINATION POSITION:
+  For "pick_and_place" tasks: what is the 3D position [x, y, z] of the DESTINATION
+  (the container, plate, shelf, or location where the object should be placed)?
+  For "articulation" tasks: set all values to null.
+  Expected format: "q1_dest": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+              or   "q1_dest": {{"x": null, "y": null, "z": null}}
+
+  Q2 - GRIPPER POSITION:
+  What is the current 3D position [x, y, z] of the robot's end-effector (gripper center)?
+  Expected format: "q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+
+  Q3 - CAN GRIPPER CLOSE NOW:
+  Based on the current gripper and object positions visible in the image, can the gripper
+  close RIGHT NOW to successfully grasp the target object?
+  Answer "yes" ONLY if the gripper jaws are already positioned around the object.
+  Expected format: "q3": {{"can_close": "yes"}} or "q3": {{"can_close": "no"}}
+
+  Q4 - NEXT MOVEMENT DIRECTION:
+  In which 3D direction should the gripper move NEXT to make progress on the task?
+  Provide a normalized unit vector [dx, dy, dz].
+  Expected format: "q4": {{"dx": <float>, "dy": <float>, "dz": <float>}}
+
+  Respond with ONLY the JSON object, for example (pick_and_place):
+  {{"task_type": "pick_and_place", "q1": {{"x": 0.55, "y": 0.20, "z": -0.01}}, "q1_dest": {{"x": 0.71, "y": 0.21, "z": -0.01}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.39, "dy": 0.56, "dz": -0.73}}}}
+
+  Or for example (articulation):
+  {{"task_type": "articulation", "q1": {{"x": 0.70, "y": -0.28, "z": 0.05}}, "q1_dest": {{"x": null, "y": null, "z": null}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.57, "dy": -0.82, "dz": 0.00}}}}

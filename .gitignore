@@ -1,3 +1,9 @@
 LIBERO/
 __pycache__/
 *.pyc
+*.pyo
+data/
+*.egg-info/
+.env
+
+lerobot/
