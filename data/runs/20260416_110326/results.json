@@ -1,0 +1,51 @@
+{
+  "qwen2.5-vl-7b": {
+    "model": "qwen2.5-vl-7b",
+    "n_total": 319,
+    "n_response": 217,
+    "parse_rate": 0.6802507836990596,
+    "task_type_accuracy": null,
+    "q1": {
+      "n": 0,
+      "mae_x": null,
+      "mae_y": null,
+      "mae_z": null,
+      "mae_overall": null,
+      "rmse_overall": null,
+      "parse_rate": 0.0
+    },
+    "q1_dest": {
+      "n": 0,
+      "mae_x": null,
+      "mae_y": null,
+      "mae_z": null,
+      "mae_overall": null,
+      "rmse_overall": null,
+      "parse_rate": 0.0
+    },
+    "q2": {
+      "n": 0,
+      "mae_x": null,
+      "mae_y": null,
+      "mae_z": null,
+      "mae_overall": null,
+      "rmse_overall": null,
+      "parse_rate": 0.0
+    },
+    "q3": {
+      "n": 0,
+      "accuracy": null,
+      "f1": null,
+      "positive_rate_gt": null,
+      "positive_rate_pred": null,
+      "parse_rate": 0.0
+    },
+    "q4": {
+      "n": 0,
+      "mean_cosine_sim": null,
+      "median_cosine_sim": null,
+      "parse_rate": 0.0
+    },
+    "run_timestamp": "20260416_110853"
+  }
+}

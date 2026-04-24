@@ -9,9 +9,15 @@ For each task in a LIBERO suite (default: libero_spatial), this script:
        - EE position relative to robot base
        - All scene object positions relative to robot base
        - Best-guess target object (via keyword matching to task description)
-       - can_close label  (dist(EE, target) < 0.04 m)
-       - next_direction   (unit vector EE → target)
+       - can_close label            (dist(EE, target) < 0.04 m)
+       - next_direction             (unit vector EE → target)
+       - gripper_to_target_delta    (target_pos - eef_pos, [Δx, Δy, Δz] in meters)  ← Q5 GT
+       - gripper_to_target_relation (axis-wise label dict, e.g.                      ← Q6 GT
+                                     {"x": "in_front", "y": "left", "z": "below"})
   5. Saves images as PNG and GT records as JSON.
+
+NOTE: If you previously extracted GT without Q5/Q6 fields, re-run this script
+to regenerate the manifest so that 03_compute_metrics.py can evaluate Q5/Q6.
 
 Usage
 -----
@@ -20,11 +26,37 @@ Usage
 
   # Custom options
   python scripts/01_extract_gt.py \\
-      --suite libero_spatial \\
+      --suite libero_goal \\
       --n_states 10 \\
-      --out_dir data/gt \\
-      --task_ids 0 1 2 \\
+      --out_dir data/gt-q6-test \\
+      --task_ids 1 \\
       --libero_path /path/to/LIBERO
+
+        # Custom options
+
+  python scripts/01_extract_gt.py \\
+      --suite libero_goal \\
+      --n_states 10 \\
+      --out_dir data/gt-q6-test \\
+      --task_ids 1 
+ 
+
+# 激活环境
+source /umd-datapool/tingting/envs/vlmbench/bin/activate
+# 或者
+/umd-datapool/tingting/envs/vlmbench/bin/python 对应 python
+
+# 直接跑（libero 已经装好，不需要 --libero_path）
+
+bash run_benchmark.sh \
+    --n_states 5 \
+    --n_traj_frames 8 \
+    --n_close 3 \
+    --gt_dir data/gt-q6 \
+    --device cuda:0 \
+    --models "qwen2.5-vl-7b random"
+
+
 
 Output
 ------
@@ -369,7 +401,17 @@ def _save_record(
     traj_len:  int | None = None,
 ) -> int:
     """Save PNG + JSON for one sample and append to manifest. Returns next sample_id."""
-    img_path = out_dir / f"sample_{sample_id:04d}.png"
+    # Build descriptive filename suffix encoding episode identity and frame type:
+    #   init  → sample_0000_t00_s00_init
+    #   traj  → sample_0001_t00_s00_traj_000of034  (step / full trajectory length)
+    #   close → sample_0002_t00_s00_close
+    if frame_type == "traj" and traj_step is not None and traj_len is not None:
+        type_suffix = f"traj_{traj_step:03d}of{traj_len:03d}"
+    else:
+        type_suffix = frame_type  # "init" or "close"
+    stem = f"sample_{sample_id:04d}_t{task_id:02d}_s{init_state_idx:02d}_{type_suffix}"
+
+    img_path = out_dir / f"{stem}.png"
     Image.fromarray(image).save(img_path)
 
     # image_path is stored relative to data_root so it stays valid regardless
@@ -382,13 +424,13 @@ def _save_record(
         "task_description": task_desc,
         "init_state_idx": init_state_idx,
         "frame_type": frame_type,
-        "image_path": str(img_path.relative_to(_data_root)),
+        "image_path": str(img_path.resolve().relative_to(_data_root.resolve())),
         "gt": gt,
     }
     if traj_step is not None:
         record["traj_step"] = traj_step
         record["traj_len"]  = traj_len
-    json_path = out_dir / f"sample_{sample_id:04d}.json"
+    json_path = out_dir / f"{stem}.json"
     json_path.write_text(json.dumps(record, indent=2))
     manifest.append(record)
 
@@ -576,35 +618,28 @@ def main() -> None:
     if multi:
         print(f"Each suite → {base_out_dir}/<suite_name>/")
 
-    all_records: list[dict] = []
     global_id = 0
 
     for suite_name in suite_names:
         task_suite = bench_dict[suite_name]()
-        # Single suite → save directly to out_dir (backward-compatible)
-        # Multiple suites → save to out_dir/<suite_name>/
-        suite_dir = base_out_dir / suite_name if multi else base_out_dir
+        # Each suite gets its own subdirectory and manifest:
+        #   <out_dir>/<suite_name>/manifest.json
+        suite_dir = base_out_dir / suite_name
         records, global_id = _extract_suite(
             suite_name, task_suite, bench_mod, get_libero_path_fn,
             OffScreenRenderEnv, suite_dir, args, global_id,
             data_root=data_root,
         )
-        all_records.extend(records)
-
-    # Combined manifest (all suites together) — useful for joint evaluation
-    if multi:
-        combined = base_out_dir / "manifest.json"
-        combined.write_text(json.dumps(all_records, indent=2))
-        print(f"\nCombined manifest ({len(all_records)} samples): {combined}")
 
     # Overall summary
     print(f"\n{'='*60}")
     print(f"Grand total: {global_id} samples across {len(suite_names)} suite(s)")
-    suite_counts = {}
-    for r in all_records:
-        suite_counts[r["suite"]] = suite_counts.get(r["suite"], 0) + 1
-    for sn, cnt in suite_counts.items():
-        print(f"  {sn}: {cnt} samples")
+    for suite_name in suite_names:
+        mf = base_out_dir / suite_name / "manifest.json"
+        if mf.exists():
+            import json as _json
+            cnt = len(_json.loads(mf.read_text()))
+            print(f"  {suite_name}: {cnt} samples  →  {mf}")
 
 
 if __name__ == "__main__":

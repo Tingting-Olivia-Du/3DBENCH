@@ -20,6 +20,9 @@
 #   --results          <resp_dir>/results.json    Metrics output (default: auto)
 #   --report           <resp_dir>/report.md       Markdown report (default: auto)
 #   --skip_gt          (flag) skip step 1 if GT already exists
+#                             NOTE: if GT was extracted before Q5/Q6 were added, do NOT
+#                             use --skip_gt — re-run step 1 to get the new GT fields
+#                             (gripper_to_target_delta, gripper_to_target_relation).
 #   --skip_eval        (flag) skip step 2, only recompute metrics
 #   --resume           (flag) pass --resume to 02_run_vlm_eval.py
 #   --task_ids         ""                Space-separated task IDs (empty = all)
@@ -27,8 +30,10 @@
 #
 # Output layout (per run):
 #   data/runs/<timestamp>/
-#   ├── qwen2.5-vl-7b/sample_*.json   ← model responses
-#   ├── random/sample_*.json
+#   ├── qwen2.5-vl-7b/<model_run_ts>/libero_spatial/sample_*.json
+#   ├── qwen2.5-vl-7b/<model_run_ts>/libero_object/sample_*.json
+#   ├── qwen2.5-vl-7b/latest          ← symlink → newest model run
+#   ├── random/<model_run_ts>/libero_spatial/sample_*.json
 #   ├── results.json                  ← aggregated metrics
 #   ├── comparison_qwen2.5-vl-7b.json ← per-sample GT vs pred
 #   └── report.md                     ← full markdown report
@@ -64,7 +69,7 @@ CLOSE_MAX_STEPS=300
 MODELS="qwen2.5-vl-7b random"
 DEVICE="cuda:0"
 MAX_NEW_TOKENS=512
-GT_DIR="data/gt"
+GT_DIR="data/gt-q6"
 SKIP_GT=0
 SKIP_EVAL=0
 RESUME=""
@@ -117,6 +122,31 @@ RUN_DIR="data/runs/${RUN_TS}"
 [[ -z "$RESULTS"  ]] && RESULTS="${RUN_DIR}/results.json"
 [[ -z "$REPORT"   ]] && REPORT="${RUN_DIR}/report.md"
 
+# Resolve manifest path(s).
+# Single suite  → use GT_DIR/<suite>/manifest.json directly.
+# Multiple suites (comma-separated or "all") → merge per-suite manifests into
+#   RUN_DIR/manifest.json, reassigning sample_ids to avoid collisions.
+_ALL_SUITES="libero_spatial libero_object libero_goal libero_10"
+
+if [[ "$SUITE" == "all" ]]; then
+    _SUITE_LIST="$_ALL_SUITES"
+elif [[ "$SUITE" == *","* ]]; then
+    _SUITE_LIST="${SUITE//,/ }"
+else
+    _SUITE_LIST="$SUITE"
+fi
+
+_SUITE_COUNT=$(echo "$_SUITE_LIST" | wc -w)
+
+if [[ "$_SUITE_COUNT" -eq 1 ]]; then
+    MANIFEST="${GT_DIR}/${_SUITE_LIST}/manifest.json"
+    _MULTI_SUITE=0
+else
+    # Multi-suite: manifest will be built after Step 1 into the run directory
+    MANIFEST="${RUN_DIR}/manifest.json"
+    _MULTI_SUITE=1
+fi
+
 # Write all console output to both terminal and the markdown file.
 # The markdown file starts with a header; subsequent appends come from scripts.
 mkdir -p "$(dirname "$REPORT")"
@@ -141,6 +171,7 @@ log "Suite:       $SUITE  |  Init states/task: $N_STATES  |  Traj frames: $N_TRA
 log "Models:      $MODELS"
 log "Device:      $DEVICE"
 log "GT dir:      $GT_DIR"
+log "Manifest:    $MANIFEST"
 log "Run folder:  $RESP_DIR"
 log "  results.json  → $RESULTS"
 log "  report.md     → $REPORT"
@@ -153,41 +184,129 @@ hr
 
 # ---------------------------------------------------------------------------
 # Step 1 – Extract ground truth
+#   Calls: scripts/01_extract_gt.py
+#   Output: $GT_DIR/<suite>/manifest.json  + per-sample files
+#   Each GT record includes fields for all metrics:
+#     Q1  target_pos               – 3D position of target object
+#     Q1d dest_pos                 – 3D position of destination (pick_and_place only)
+#     Q2  eef_pos                  – gripper (end-effector) 3D position
+#     Q3  can_close                – bool: gripper within 0.04 m of target
+#     Q4  next_direction           – unit vector EE → target
+#     Q5  gripper_to_target_delta  – raw offset vector target_pos - eef_pos
+#     Q6  gripper_to_target_relation – axis-wise spatial label dict
+#                                     {"x": "in_front|behind|aligned_x",
+#                                      "y": "left|right|aligned_y",
+#                                      "z": "above|below|aligned_z"}
 # ---------------------------------------------------------------------------
 if [[ $SKIP_GT -eq 0 ]]; then
     log "STEP 1/3  Extract ground truth from LIBERO sim"
 
-    GT_ARGS=(
-        --suite           "$SUITE"
-        --n_states        "$N_STATES"
-        --n_traj_frames   "$N_TRAJ_FRAMES"
-        --n_close         "$N_CLOSE"
-        --close_max_steps "$CLOSE_MAX_STEPS"
-        --out_dir         "$GT_DIR"
-    )
-    [[ -n "$TASK_IDS" ]]    && GT_ARGS+=(--task_ids $TASK_IDS)
-    [[ -n "$LIBERO_PATH" ]] && GT_ARGS+=(--libero_path "$LIBERO_PATH")
+    for _S in $_SUITE_LIST; do
+        log "  Extracting suite: $_S"
+        GT_ARGS=(
+            --suite           "$_S"
+            --n_states        "$N_STATES"
+            --n_traj_frames   "$N_TRAJ_FRAMES"
+            --n_close         "$N_CLOSE"
+            --close_max_steps "$CLOSE_MAX_STEPS"
+            --out_dir         "$GT_DIR"
+        )
+        [[ -n "$TASK_IDS" ]]    && GT_ARGS+=(--task_ids $TASK_IDS)
+        [[ -n "$LIBERO_PATH" ]] && GT_ARGS+=(--libero_path "$LIBERO_PATH")
+        python scripts/01_extract_gt.py "${GT_ARGS[@]}"
+    done
 
-    python scripts/01_extract_gt.py "${GT_ARGS[@]}"
-    log "STEP 1 done  →  $GT_DIR/manifest.json"
-else
-    if [[ ! -f "$GT_DIR/manifest.json" ]]; then
-        log "ERROR: --skip_gt was set but $GT_DIR/manifest.json not found."
-        exit 1
+    if [[ $_MULTI_SUITE -eq 1 ]]; then
+        log "  Merging per-suite manifests → $MANIFEST"
+        mkdir -p "$(dirname "$MANIFEST")"
+        _SUITE_MANIFESTS=""
+        for _S in $_SUITE_LIST; do
+            _SUITE_MANIFESTS="$_SUITE_MANIFESTS ${GT_DIR}/${_S}/manifest.json"
+        done
+        python - <<PYEOF
+import json, sys
+
+suite_manifests = "$_SUITE_MANIFESTS".split()
+merged = []
+next_id = 0
+for path in suite_manifests:
+    with open(path) as f:
+        samples = json.load(f)
+    for s in samples:
+        s["sample_id"] = next_id
+        next_id += 1
+        merged.append(s)
+
+with open("$MANIFEST", "w") as f:
+    json.dump(merged, f, indent=2)
+print(f"Merged {len(merged)} samples from {len(suite_manifests)} suites → $MANIFEST")
+PYEOF
     fi
-    log "STEP 1 skipped  (using existing $GT_DIR/manifest.json)"
+
+    log "STEP 1 done  →  $MANIFEST"
+else
+    # --skip_gt: validate that required manifests exist
+    if [[ $_MULTI_SUITE -eq 1 ]]; then
+        _missing=0
+        for _S in $_SUITE_LIST; do
+            _sm="${GT_DIR}/${_S}/manifest.json"
+            if [[ ! -f "$_sm" ]]; then
+                log "ERROR: --skip_gt was set but $_sm not found."
+                _missing=1
+            fi
+        done
+        [[ $_missing -eq 1 ]] && exit 1
+        # Build merged manifest if it doesn't exist yet (e.g. first --skip_gt on multi-suite)
+        if [[ ! -f "$MANIFEST" ]]; then
+            log "  Building merged manifest → $MANIFEST"
+            mkdir -p "$(dirname "$MANIFEST")"
+            _SUITE_MANIFESTS=""
+            for _S in $_SUITE_LIST; do
+                _SUITE_MANIFESTS="$_SUITE_MANIFESTS ${GT_DIR}/${_S}/manifest.json"
+            done
+            python - <<PYEOF
+import json
+
+suite_manifests = "$_SUITE_MANIFESTS".split()
+merged = []
+next_id = 0
+for path in suite_manifests:
+    with open(path) as f:
+        samples = json.load(f)
+    for s in samples:
+        s["sample_id"] = next_id
+        next_id += 1
+        merged.append(s)
+
+with open("$MANIFEST", "w") as f:
+    json.dump(merged, f, indent=2)
+print(f"Merged {len(merged)} samples from {len(suite_manifests)} suites → $MANIFEST")
+PYEOF
+        fi
+    else
+        if [[ ! -f "$MANIFEST" ]]; then
+            log "ERROR: --skip_gt was set but $MANIFEST not found."
+            exit 1
+        fi
+    fi
+    log "STEP 1 skipped  (using existing $MANIFEST)"
 fi
 
 hr
 
 # ---------------------------------------------------------------------------
 # Step 2 – Run VLM evaluation
+#   Calls: scripts/02_run_vlm_eval.py
+#   Input:  $GT_DIR/manifest.json (images + task descriptions)
+#   Output: $RESP_DIR/<model>/sample_*.json  (one file per sample per model)
+#   The prompt (prompts/spatial_qa.yaml) asks the model for 7 keys:
+#     task_type, q1, q1_dest, q2, q3, q4, q5, q6
 # ---------------------------------------------------------------------------
 if [[ $SKIP_EVAL -eq 0 ]]; then
     log "STEP 2/3  VLM evaluation"
 
     EVAL_ARGS=(
-        --manifest       "$GT_DIR/manifest.json"
+        --manifest       "$MANIFEST"
         --out_dir        "$RESP_DIR"
         --models         $MODELS
         --device         "$DEVICE"
@@ -205,11 +324,20 @@ hr
 
 # ---------------------------------------------------------------------------
 # Step 3 – Compute metrics
+#   Calls: scripts/03_compute_metrics.py
+#   Input:  $GT_DIR/manifest.json  +  $RESP_DIR/<model>/sample_*.json
+#   Output: $RESULTS (JSON summary)  +  $REPORT (markdown)
+#           + $RESP_DIR/comparison_<model>.json (per-sample GT vs pred)
+#   Metrics computed:
+#     Q1/Q1d/Q2/Q5  MAE & RMSE per axis + overall (position / offset vectors)
+#     Q3            Accuracy + F1 (binary can_close classification)
+#     Q4            Mean & median cosine similarity (direction vector)
+#     Q6            Per-axis accuracy + macro-F1 + all-axes accuracy (spatial labels)
 # ---------------------------------------------------------------------------
 log "STEP 3/3  Compute metrics"
 
 python scripts/03_compute_metrics.py \
-    --manifest      "$GT_DIR/manifest.json" \
+    --manifest      "$MANIFEST" \
     --responses_dir "$RESP_DIR" \
     --out           "$RESULTS" \
     --report        "$REPORT"

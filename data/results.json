@@ -1,0 +1,100 @@
+{
+  "qwen2.5-vl-7b": {
+    "model": "qwen2.5-vl-7b",
+    "n_total": 50,
+    "n_response": 50,
+    "parse_rate": 1.0,
+    "task_type_accuracy": 1.0,
+    "q1": {
+      "n": 50,
+      "mae_x": 0.1799525413274447,
+      "mae_y": 0.17141788387371762,
+      "mae_z": 0.03179193802228352,
+      "mae_overall": 0.1277207877411486,
+      "rmse_overall": 0.17665244980038386,
+      "parse_rate": 1.0
+    },
+    "q1_dest": {
+      "n": 50,
+      "mae_x": 0.11263037438500266,
+      "mae_y": 0.06693316295820997,
+      "mae_z": 0.003286084987891674,
+      "mae_overall": 0.060949874110368105,
+      "rmse_overall": 0.10782332827588029,
+      "parse_rate": 1.0
+    },
+    "q2": {
+      "n": 50,
+      "mae_x": 0.004313167992412862,
+      "mae_y": 0.0104603623854862,
+      "mae_z": 0.006737109488802315,
+      "mae_overall": 0.007170213288900461,
+      "rmse_overall": 0.009381116172207306,
+      "parse_rate": 1.0
+    },
+    "q3": {
+      "n": 50,
+      "accuracy": 0.4,
+      "f1": 0.0,
+      "positive_rate_gt": 0.0,
+      "positive_rate_pred": 0.6,
+      "parse_rate": 1.0
+    },
+    "q4": {
+      "n": 50,
+      "mean_cosine_sim": 0.7070793210965545,
+      "median_cosine_sim": 0.7720140453257001,
+      "parse_rate": 1.0
+    },
+    "run_timestamp": "20260416_101626"
+  },
+  "random": {
+    "model": "random",
+    "n_total": 50,
+    "n_response": 50,
+    "parse_rate": 1.0,
+    "task_type_accuracy": null,
+    "q1": {
+      "n": 50,
+      "mae_x": 0.40244427544808636,
+      "mae_y": 0.1888109199838029,
+      "mae_z": 0.9439008862953898,
+      "mae_overall": 0.5117186939090932,
+      "rmse_overall": 0.6138563234257441,
+      "parse_rate": 1.0
+    },
+    "q1_dest": {
+      "n": 0,
+      "mae_x": null,
+      "mae_y": null,
+      "mae_z": null,
+      "mae_overall": null,
+      "rmse_overall": null,
+      "parse_rate": 0.0
+    },
+    "q2": {
+      "n": 50,
+      "mae_x": 0.20640092378349117,
+      "mae_y": 0.12112005051022168,
+      "mae_z": 0.6595216855184534,
+      "mae_overall": 0.32901421993738866,
+      "rmse_overall": 0.4129286635629399,
+      "parse_rate": 1.0
+    },
+    "q3": {
+      "n": 50,
+      "accuracy": 0.48,
+      "f1": 0.0,
+      "positive_rate_gt": 0.0,
+      "positive_rate_pred": 0.52,
+      "parse_rate": 1.0
+    },
+    "q4": {
+      "n": 50,
+      "mean_cosine_sim": -0.14005858746060637,
+      "median_cosine_sim": -0.08529792050267163,
+      "parse_rate": 1.0
+    },
+    "run_timestamp": "20260416_101626"
+  }
+}

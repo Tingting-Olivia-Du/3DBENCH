@@ -21,6 +21,10 @@ import numpy as np
 # Panda gripper half-width when open ≈ 0.04 m.
 CLOSE_THRESHOLD = 0.04
 
+# Alignment threshold (m) for spatial relation classification (Q6).
+# Differences smaller than this are considered "aligned" on that axis.
+ALIGN_THRESHOLD = 0.02
+
 # Body name fragments that belong to the robot or the environment,
 # NOT to manipulable scene objects.
 _ROBOT_KEYWORDS: frozenset[str] = frozenset(
@@ -212,6 +216,58 @@ def compute_next_direction(eef_pos: np.ndarray, target_pos: np.ndarray) -> list[
     return (delta / norm).tolist()
 
 
+def compute_gripper_to_target_delta(eef_pos: np.ndarray, target_pos: np.ndarray) -> list[float]:
+    """3D offset vector from gripper to target: target_pos - eef_pos.
+
+    Positive dx means target is further forward (X+) than gripper.
+    Positive dy means target is further left (Y+) than gripper.
+    Positive dz means target is higher (Z+) than gripper.
+    """
+    return (target_pos - eef_pos).tolist()
+
+
+def compute_spatial_relation(
+    eef_pos: np.ndarray,
+    target_pos: np.ndarray,
+    threshold: float = ALIGN_THRESHOLD,
+) -> dict[str, str]:
+    """Classify the axis-wise spatial relationship of target relative to gripper.
+
+    Returns a dict with keys "x", "y", "z", each taking one of three labels:
+      X: "in_front" (target further forward) | "behind" | "aligned_x"
+      Y: "left"     (target to robot's left) | "right"  | "aligned_y"
+      Z: "above"    (target higher)          | "below"  | "aligned_z"
+
+    The perspective is "where is the TARGET relative to the GRIPPER".
+    delta = target_pos - eef_pos; positive delta_x means target is in front of gripper.
+    """
+    delta = target_pos - eef_pos
+
+    if delta[0] > threshold:
+        x_rel = "in_front"
+    elif delta[0] < -threshold:
+        x_rel = "behind"
+    else:
+        x_rel = "aligned_x"
+
+    # Y+ = robot's left; positive delta_y means target is to the left of gripper
+    if delta[1] > threshold:
+        y_rel = "left"
+    elif delta[1] < -threshold:
+        y_rel = "right"
+    else:
+        y_rel = "aligned_y"
+
+    if delta[2] > threshold:
+        z_rel = "above"
+    elif delta[2] < -threshold:
+        z_rel = "below"
+    else:
+        z_rel = "aligned_z"
+
+    return {"x": x_rel, "y": y_rel, "z": z_rel}
+
+
 def extract_gt_from_obs(
     raw_obs: dict,
     sim,
@@ -255,6 +311,8 @@ def extract_gt_from_obs(
         "can_close": compute_can_close(eef_pos, target_pos),
         "next_direction": compute_next_direction(eef_pos, target_pos),
         "distance_to_target": float(np.linalg.norm(eef_pos - target_pos)),
+        "gripper_to_target_delta": compute_gripper_to_target_delta(eef_pos, target_pos),
+        "gripper_to_target_relation": compute_spatial_relation(eef_pos, target_pos),
     }
 
 

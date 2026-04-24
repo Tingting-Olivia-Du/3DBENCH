@@ -35,13 +35,13 @@ system: |
   OUTPUT FORMAT:
   You MUST respond with exactly one valid JSON object. Do NOT add any text, markdown,
   code fences, or explanation outside the JSON.
-  The JSON must have exactly five top-level keys: "task_type", "q1", "q1_dest", "q2", "q3", "q4".
+  The JSON must have exactly seven top-level keys: "task_type", "q1", "q1_dest", "q2", "q3", "q4", "q5", "q6".
 
 user_template: |
   Task description: "{task_description}"
 
   Looking at the robot workspace image, answer all questions below.
-  Your answer must be a single JSON object with keys: task_type, q1, q1_dest, q2, q3, q4.
+  Your answer must be a single JSON object with keys: task_type, q1, q1_dest, q2, q3, q4, q5, q6.
 
   TASK_TYPE - CLASSIFY THE TASK:
   Is this a "pick_and_place" task (pick up an object and place it somewhere) or an
@@ -75,8 +75,25 @@ user_template: |
   Provide a normalized unit vector [dx, dy, dz].
   Expected format: "q4": {{"dx": <float>, "dy": <float>, "dz": <float>}}
 
+  Q5 - RELATIVE POSITION FROM GRIPPER TO TARGET:
+  What is the relative 3D offset [dx, dy, dz] from the robot's end-effector (gripper center)
+  to the TARGET OBJECT? In other words, compute: target_position - gripper_position.
+  A positive dx means the target is further forward (X+) than the gripper.
+  A positive dy means the target is further to the robot's left (Y+) than the gripper.
+  A positive dz means the target is higher (Z+) than the gripper.
+  Expected format: "q5": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}
+
+  Q6 - SPATIAL RELATIONSHIP (LANGUAGE):
+  Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
+  Use ONLY the exact labels listed below (no other words):
+  - X-axis: "in_front" (target is further from robot base, X+), "behind" (target is closer to robot base, X-), or "aligned_x"
+  - Y-axis: "left" (target is to the robot's left, Y+), "right" (target is to the robot's right, Y-), or "aligned_y"
+  - Z-axis: "above" (target is higher, Z+), "below" (target is lower, Z-), or "aligned_z"
+  Use "aligned_x"/"aligned_y"/"aligned_z" only if the offset on that axis is very small (a few centimeters or less).
+  Expected format: "q6": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
+
   Respond with ONLY the JSON object, for example (pick_and_place):
-  {{"task_type": "pick_and_place", "q1": {{"x": 0.55, "y": 0.20, "z": -0.01}}, "q1_dest": {{"x": 0.71, "y": 0.21, "z": -0.01}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.39, "dy": 0.56, "dz": -0.73}}}}
+  {{"task_type": "pick_and_place", "q1": {{"x": 0.55, "y": 0.20, "z": -0.01}}, "q1_dest": {{"x": 0.71, "y": 0.21, "z": -0.01}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.39, "dy": 0.56, "dz": -0.73}}, "q5": {{"dx": 0.10, "dy": 0.21, "dz": -0.27}}, "q6": {{"x": "in_front", "y": "left", "z": "below"}}}}
 
   Or for example (articulation):
-  {{"task_type": "articulation", "q1": {{"x": 0.70, "y": -0.28, "z": 0.05}}, "q1_dest": {{"x": null, "y": null, "z": null}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.57, "dy": -0.82, "dz": 0.00}}}}
+  {{"task_type": "articulation", "q1": {{"x": 0.70, "y": -0.28, "z": 0.05}}, "q1_dest": {{"x": null, "y": null, "z": null}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.57, "dy": -0.82, "dz": 0.00}}, "q5": {{"dx": 0.25, "dy": -0.27, "dz": -0.21}}, "q6": {{"x": "in_front", "y": "right", "z": "below"}}}}

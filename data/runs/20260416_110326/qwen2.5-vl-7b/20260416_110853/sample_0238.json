@@ -1,0 +1,10 @@
+{
+  "sample_id": 238,
+  "model": "qwen2.5-vl-7b",
+  "run_timestamp": "20260416_110853",
+  "sample_timestamp": "2026-04-16T11:09:10",
+  "task_description": "pick up the black bowl on the stove and place it on the plate",
+  "image_path": "data/gt/task_07/sample_0238.png",
+  "raw_response": "ERROR: [Errno 2] No such file or directory: '/umd-datapool/tingting/3DBENCH/data/data/gt/task_07/sample_0238.png'",
+  "elapsed_s": 0.003
+}

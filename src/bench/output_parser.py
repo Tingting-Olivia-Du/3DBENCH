@@ -5,7 +5,9 @@ Expected VLM output (single JSON object):
     "q1": {"x": float, "y": float, "z": float},   # target object position
     "q2": {"x": float, "y": float, "z": float},   # gripper position
     "q3": {"can_close": "yes"|"no"},               # gripper close label
-    "q4": {"dx": float, "dy": float, "dz": float}  # next move direction
+    "q4": {"dx": float, "dy": float, "dz": float}, # next move direction (unit vector)
+    "q5": {"dx": float, "dy": float, "dz": float}, # gripper→target offset (not normalized)
+    "q6": {"x": str, "y": str, "z": str}           # axis-wise spatial relation labels
   }
 
 The parser is lenient: it tolerates markdown code fences, alternative key
@@ -98,6 +100,66 @@ def _parse_can_close(data: Any) -> bool | None:
     return None
 
 
+def _parse_delta(data: Any) -> list[float] | None:
+    """Parse {"dx": ..., "dy": ..., "dz": ...} → [dx, dy, dz] without normalizing.
+
+    Used for Q5 (gripper-to-target offset), unlike Q4 which normalizes.
+    """
+    if not isinstance(data, dict):
+        return None
+    try:
+        return [float(data["dx"]), float(data["dy"]), float(data["dz"])]
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+# Valid label sets for Q6 spatial relation parsing
+_X_LABELS = {"in_front", "behind", "aligned_x"}
+_Y_LABELS = {"left", "right", "aligned_y"}
+_Z_LABELS = {"above", "below", "aligned_z"}
+
+# Alias normalization for Q6: map common VLM alternatives to canonical labels
+_X_ALIASES: dict[str, str] = {
+    "forward": "in_front", "front": "in_front", "ahead": "in_front",
+    "backward": "behind", "back": "behind",
+    "aligned": "aligned_x",
+}
+_Y_ALIASES: dict[str, str] = {
+    "aligned": "aligned_y",
+}
+_Z_ALIASES: dict[str, str] = {
+    "up": "above", "higher": "above", "over": "above",
+    "down": "below", "lower": "below", "under": "below",
+    "aligned": "aligned_z",
+}
+
+
+def _normalize_relation_label(raw: str, valid: set[str], aliases: dict[str, str]) -> str | None:
+    """Normalize a raw label string to a canonical relation label."""
+    if not isinstance(raw, str):
+        return None
+    s = raw.strip().lower()
+    if s in valid:
+        return s
+    if s in aliases:
+        candidate = aliases[s]
+        if candidate in valid:
+            return candidate
+    return None
+
+
+def _parse_spatial_relation(data: Any) -> dict[str, str] | None:
+    """Parse {"x": str, "y": str, "z": str} → canonical relation dict or None."""
+    if not isinstance(data, dict):
+        return None
+    x_label = _normalize_relation_label(data.get("x", ""), _X_LABELS, _X_ALIASES)
+    y_label = _normalize_relation_label(data.get("y", ""), _Y_LABELS, _Y_ALIASES)
+    z_label = _normalize_relation_label(data.get("z", ""), _Z_LABELS, _Z_ALIASES)
+    if x_label is None and y_label is None and z_label is None:
+        return None
+    return {"x": x_label, "y": y_label, "z": z_label}
+
+
 # ----- Top-level resolver ----------------------------------------------
 
 def _resolve_subfield(top: dict, primary_key: str, alt_keys: tuple[str, ...]) -> Any:
@@ -116,12 +178,14 @@ class ResponseParser:
     def parse(self, response_text: str) -> dict:
         """Return a dict with keys:
 
-        raw           – original response string
-        parsed_ok     – bool, True if at least one field was successfully parsed
-        q1_object_pos – [x, y, z] or None
-        q2_gripper_pos– [x, y, z] or None
-        q3_can_close  – bool or None
-        q4_next_dir   – [dx, dy, dz] (unit vector) or None
+        raw                  – original response string
+        parsed_ok            – bool, True if at least one field was successfully parsed
+        q1_object_pos        – [x, y, z] or None
+        q2_gripper_pos       – [x, y, z] or None
+        q3_can_close         – bool or None
+        q4_next_dir          – [dx, dy, dz] (unit vector) or None
+        q5_gripper_to_target – [dx, dy, dz] (raw offset, not normalized) or None
+        q6_spatial_relation  – {"x": str, "y": str, "z": str} or None
         """
         result: dict = {
             "raw": response_text,
@@ -132,6 +196,8 @@ class ResponseParser:
             "q2_gripper_pos": None,
             "q3_can_close": None,
             "q4_next_dir": None,
+            "q5_gripper_to_target": None,
+            "q6_spatial_relation": None,
         }
 
         data = _extract_json_from_text(response_text)
@@ -169,9 +235,17 @@ class ResponseParser:
         q3_raw = _resolve_subfield(data, "q3", ("can_close", "gripper_close"))
         result["q3_can_close"] = _parse_can_close(q3_raw)
 
-        # Q4 – next direction
+        # Q4 – next direction (normalized unit vector)
         q4_raw = _resolve_subfield(data, "q4", ("next_direction", "direction", "move_direction"))
         result["q4_next_dir"] = _parse_direction(q4_raw)
+
+        # Q5 – gripper-to-target offset vector (raw, not normalized)
+        q5_raw = _resolve_subfield(data, "q5", ("gripper_to_target", "relative_position", "delta"))
+        result["q5_gripper_to_target"] = _parse_delta(q5_raw)
+
+        # Q6 – axis-wise spatial relation labels
+        q6_raw = _resolve_subfield(data, "q6", ("spatial_relation", "relation", "spatial_relationship"))
+        result["q6_spatial_relation"] = _parse_spatial_relation(q6_raw)
 
         result["parsed_ok"] = any(
             result[k] is not None

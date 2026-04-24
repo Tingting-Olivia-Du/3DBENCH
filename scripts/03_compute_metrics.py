@@ -49,6 +49,7 @@ from bench.metrics import (
     format_results_table,
     parse_rate,
     position_metrics,
+    spatial_relation_metrics,
 )
 from bench.output_parser import ResponseParser
 
@@ -89,9 +90,11 @@ def _load_manifest(path: Path) -> list[dict]:
 def _load_responses(model_dir: Path) -> tuple[dict[int, dict], str]:
     """Load response JSON files for one model from the latest timestamped run.
 
-    Directory layout (new):  responses/<model>/<YYYYMMDD_HHMMSS>/sample_*.json
-                              responses/<model>/latest  (symlink → newest run)
-    Legacy layout (old):     responses/<model>/sample_*.json
+    Directory layouts supported:
+      New with suite:  responses/<model>/<YYYYMMDD_HHMMSS>/<suite>/sample_*.json
+      New flat:        responses/<model>/<YYYYMMDD_HHMMSS>/sample_*.json
+      Legacy flat:     responses/<model>/sample_*.json
+      responses/<model>/latest  (symlink → newest run timestamp)
 
     Returns ({sample_id: record}, run_timestamp_str).
     """
@@ -101,7 +104,6 @@ def _load_responses(model_dir: Path) -> tuple[dict[int, dict], str]:
         search_dir = latest.resolve()
         run_ts = search_dir.name
     else:
-        # Fall back to direct files (legacy) or newest subdirectory
         subdirs = sorted(
             (d for d in model_dir.iterdir() if d.is_dir()),
             key=lambda d: d.name,
@@ -110,7 +112,9 @@ def _load_responses(model_dir: Path) -> tuple[dict[int, dict], str]:
         run_ts = search_dir.name if subdirs else "unknown"
 
     responses: dict[int, dict] = {}
-    for fp in sorted(search_dir.glob("sample_*.json")):
+    # rglob picks up both flat layout (sample_*.json directly) and
+    # suite-subdirectory layout (<suite>/sample_*.json)
+    for fp in sorted(search_dir.rglob("sample_*.json")):
         try:
             rec = json.loads(fp.read_text())
             responses[int(rec["sample_id"])] = rec
@@ -143,6 +147,8 @@ def evaluate_model(
     gt_q2, pred_q2 = [], []
     gt_q3, pred_q3 = [], []
     gt_q4, pred_q4 = [], []
+    gt_q5, pred_q5 = [], []     # gripper-to-target offset vector
+    gt_q6, pred_q6 = [], []     # spatial relation dicts
     task_type_correct = []      # task_type classification
 
     n_total = len(manifest)
@@ -207,6 +213,25 @@ def evaluate_model(
             gt_q4.append(gt_q4_val)
             pred_q4.append(pred_q4_val)
 
+        # ---- Q5: gripper-to-target offset vector ----
+        gt_q5_val = _safe_list(gt.get("gripper_to_target_delta"))
+        pred_q5_val = _safe_list(parsed["q5_gripper_to_target"])
+        if gt_q5_val and pred_q5_val:
+            gt_q5.append(gt_q5_val)
+            pred_q5.append(pred_q5_val)
+
+        # ---- Q6: spatial relation classification ----
+        gt_q6_val = gt.get("gripper_to_target_relation")
+        pred_q6_val = parsed["q6_spatial_relation"]
+        # Only include if GT has the field and all axes of pred are non-None
+        if (
+            isinstance(gt_q6_val, dict)
+            and isinstance(pred_q6_val, dict)
+            and all(pred_q6_val.get(ax) is not None for ax in ("x", "y", "z"))
+        ):
+            gt_q6.append(gt_q6_val)
+            pred_q6.append(pred_q6_val)
+
         # ---- per-sample error fields ----
         q1_err = (
             [round(abs(p - g), 4) for p, g in zip(pred_q1_val, gt_q1_val)]
@@ -225,6 +250,19 @@ def evaluate_model(
             a = np.array(pred_q4_val); b = np.array(gt_q4_val)
             a /= np.linalg.norm(a) + 1e-8; b /= np.linalg.norm(b) + 1e-8
             q4_cos = round(float(np.dot(a, b)), 4)
+
+        q5_err = (
+            [round(abs(p - g), 4) for p, g in zip(pred_q5_val, gt_q5_val)]
+            if gt_q5_val and pred_q5_val else None
+        )
+
+        # Q6 per-axis correctness
+        q6_correct = None
+        if isinstance(gt_q6_val, dict) and isinstance(pred_q6_val, dict):
+            q6_correct = {
+                ax: (pred_q6_val.get(ax) == gt_q6_val.get(ax))
+                for ax in ("x", "y", "z")
+            }
 
         sample_records.append({
             "sample_id": sid,
@@ -261,6 +299,16 @@ def evaluate_model(
                 "pred": [round(v, 4) for v in pred_q4_val] if pred_q4_val else None,
                 "cosine_sim": q4_cos,
             },
+            "q5": {
+                "gt":   [round(v, 4) for v in gt_q5_val] if gt_q5_val else None,
+                "pred": [round(v, 4) for v in pred_q5_val] if pred_q5_val else None,
+                "abs_err_xyz": q5_err,
+            },
+            "q6": {
+                "gt":   gt_q6_val,
+                "pred": pred_q6_val if isinstance(pred_q6_val, dict) else None,
+                "correct": q6_correct,
+            },
         })
 
     return {
@@ -289,6 +337,14 @@ def evaluate_model(
             **direction_metrics(pred_q4, gt_q4),
             "parse_rate": len(pred_q4) / n_response if n_response > 0 else 0.0,
         },
+        "q5": {
+            **position_metrics(pred_q5, gt_q5),
+            "parse_rate": len(pred_q5) / n_response if n_response > 0 else 0.0,
+        },
+        "q6": {
+            **spatial_relation_metrics(pred_q6, gt_q6),
+            "parse_rate": len(pred_q6) / n_response if n_response > 0 else 0.0,
+        },
         "samples": sample_records,
     }
 
@@ -308,7 +364,7 @@ def _axis_table(results: dict[str, dict]) -> str:
         return f"{v:.4f}" if v is not None else "  N/A  "
 
     for slug, m in results.items():
-        for q_key, label in (("q1", "Q1"), ("q2", "Q2")):
+        for q_key, label in (("q1", "Q1"), ("q2", "Q2"), ("q5", "Q5")):
             qm = m.get(q_key, {})
             lines.append(
                 f"{slug:<30}  {label}  "
@@ -318,6 +374,38 @@ def _axis_table(results: dict[str, dict]) -> str:
                 f"n={qm.get('n', 0)}"
             )
     lines.append("-" * 70)
+    return "\n".join(lines)
+
+
+def _q6_detail(results: dict[str, dict]) -> str:
+    """Print Q6 spatial relation per-axis accuracy stats."""
+    lines = ["\nQ6 (spatial_relation) detail", "-" * 90]
+    lines.append(
+        f"{'Model':<30}  {'AccX':>8}  {'AccY':>8}  {'AccZ':>8}  "
+        f"{'AccAll':>8}  {'F1X':>8}  {'F1Y':>8}  {'F1Z':>8}  {'Parse%':>8}"
+    )
+    lines.append("-" * 90)
+
+    def _f(v):
+        return f"{v:.4f}" if v is not None else "  N/A  "
+
+    def _p(v):
+        return f"{v:.1%}" if v is not None else "  N/A  "
+
+    for slug, m in results.items():
+        qm = m.get("q6", {})
+        lines.append(
+            f"{slug:<30}  "
+            f"{_f(qm.get('acc_x')):>8}  "
+            f"{_f(qm.get('acc_y')):>8}  "
+            f"{_f(qm.get('acc_z')):>8}  "
+            f"{_f(qm.get('acc_all')):>8}  "
+            f"{_f(qm.get('f1_x')):>8}  "
+            f"{_f(qm.get('f1_y')):>8}  "
+            f"{_f(qm.get('f1_z')):>8}  "
+            f"{_p(qm.get('parse_rate')):>8}"
+        )
+    lines.append("-" * 90)
     return "\n".join(lines)
 
 
@@ -388,7 +476,8 @@ def write_markdown_report(
     # --- Summary table ---
     lines.append("### Summary\n")
     hdrs = ["Model", "Run", "Parse %", "Q1 MAE (m)", "Q1_dest MAE (m)",
-            "Q2 MAE (m)", "Q3 Acc", "Q3 F1", "Q4 CosSim", "TaskType Acc"]
+            "Q2 MAE (m)", "Q3 Acc", "Q3 F1", "Q4 CosSim",
+            "Q5 MAE (m)", "Q6 AccAll", "TaskType Acc"]
     rows = []
     for slug, m in display.items():
         rows.append([
@@ -401,6 +490,8 @@ def write_markdown_report(
             _f(m.get("q3", {}).get("accuracy")),
             _f(m.get("q3", {}).get("f1")),
             _f(m.get("q4", {}).get("mean_cosine_sim")),
+            _f(m.get("q5", {}).get("mae_overall")),
+            _f(m.get("q6", {}).get("acc_all")),
             _p(m.get("task_type_accuracy")) if m.get("task_type_accuracy") is not None else "—",
         ])
     lines.append(_md_table(hdrs, rows))
@@ -411,7 +502,10 @@ def write_markdown_report(
     hdrs2 = ["Model", "Q", "MAE x", "MAE y", "MAE z", "RMSE overall", "n"]
     rows2 = []
     for slug, m in display.items():
-        for q_key, label in (("q1", "Q1 source"), ("q1_dest", "Q1 dest"), ("q2", "Q2 gripper")):
+        for q_key, label in (
+            ("q1", "Q1 source"), ("q1_dest", "Q1 dest"),
+            ("q2", "Q2 gripper"), ("q5", "Q5 offset"),
+        ):
             qm = m.get(q_key, {})
             rows2.append([
                 f"`{slug}`", label,
@@ -434,6 +528,22 @@ def write_markdown_report(
             _p(qm.get("parse_rate")),
         ])
     lines.append(_md_table(hdrs3, rows3))
+    lines.append("")
+
+    # --- Q6 detail ---
+    lines.append("### Q6 — Spatial Relation (Language)\n")
+    hdrs6 = ["Model", "Acc X", "Acc Y", "Acc Z", "Acc All", "F1 X", "F1 Y", "F1 Z", "Parse %"]
+    rows6 = []
+    for slug, m in display.items():
+        qm = m.get("q6", {})
+        rows6.append([
+            f"`{slug}`",
+            _f(qm.get("acc_x")), _f(qm.get("acc_y")), _f(qm.get("acc_z")),
+            _f(qm.get("acc_all")),
+            _f(qm.get("f1_x")), _f(qm.get("f1_y")), _f(qm.get("f1_z")),
+            _p(qm.get("parse_rate")),
+        ])
+    lines.append(_md_table(hdrs6, rows6))
     lines.append("")
 
     # --- Full per-sample comparison (all models) ---
@@ -471,7 +581,26 @@ def write_markdown_report(
             "Q2 gt", "Q2 pred", "Q2 MAE (xyz → overall)",
             "Q3 gt", "Q3 pred",
             "Q4 gt", "Q4 pred", "Q4 CosSim",
+            "Q5 gt", "Q5 pred", "Q5 MAE (xyz → overall)",
+            "Q6 gt", "Q6 pred", "Q6 correct (xyz)",
         ]
+
+        def _relation(d, key):
+            v = d.get(key) if d else None
+            if isinstance(v, dict):
+                return f"`{v.get('x','?')}/{v.get('y','?')}/{v.get('z','?')}`"
+            return "—"
+
+        def _q6_correct(d):
+            v = d.get("correct") if d else None
+            if isinstance(v, dict):
+                return "`{}/{}/{}`".format(
+                    "✓" if v.get("x") else "✗",
+                    "✓" if v.get("y") else "✗",
+                    "✓" if v.get("z") else "✗",
+                )
+            return "—"
+
         rows4 = []
         for s in samples:
             q3 = s.get("q3", {})
@@ -493,6 +622,12 @@ def write_markdown_report(
                 _xyz(s.get("q4", {}), "gt"),
                 _xyz(s.get("q4", {}), "pred"),
                 _cos(s.get("q4", {})),
+                _xyz(s.get("q5", {}), "gt"),
+                _xyz(s.get("q5", {}), "pred"),
+                _mae_xyz(s.get("q5", {})),
+                _relation(s.get("q6", {}), "gt"),
+                _relation(s.get("q6", {}), "pred"),
+                _q6_correct(s.get("q6", {})),
             ])
         lines.append(_md_table(hdrs4, rows4))
         lines.append("")
@@ -562,6 +697,7 @@ def main() -> None:
     print(format_results_table(display_results))
     print(_axis_table(display_results))
     print(_q3_detail(display_results))
+    print(_q6_detail(display_results))
 
     # ---------------------------------------------------------------------------
     # Save results: summary (no sample detail) + per-sample comparison
@@ -624,6 +760,8 @@ def main() -> None:
     print("  Q1/Q2 MAE (m): lower = better. Random baseline ~ 0.15–0.20 m")
     print("  Q3 F1       : near 0 = model always says 'no' (correct at task reset)")
     print("  Q4 CosSim   : range [-1,1]; random ~0.0; perfect=1.0")
+    print("  Q5 MAE (m)  : gripper-to-target offset error; lower = better")
+    print("  Q6 AccAll   : fraction of samples where all 3 axes are correctly labeled")
     print("  Parse rate  : fraction of responses parseable as valid JSON")
     print(f"\n  Per-sample comparisons: data/comparison_<model>.json")
 
