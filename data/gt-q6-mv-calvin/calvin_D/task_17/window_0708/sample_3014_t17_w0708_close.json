@@ -1,0 +1,104 @@
+{
+  "sample_id": 3014,
+  "suite": "calvin_D",
+  "task_id": 17,
+  "task_description": "grasp the drawer handle and open it",
+  "init_state_idx": 219987,
+  "frame_type": "close",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_17/window_0708/sample_3014_t17_w0708_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_17/window_0708/sample_3014_t17_w0708_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_17/window_0708/sample_3014_t17_w0708_close_wrist.png"
+  },
+  "calvin_window": [
+    219987,
+    220051
+  ],
+  "calvin_frame_idx": 220050,
+  "calvin_task_class": "open_drawer",
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.20821136236190796,
+      -0.3847077190876007,
+      0.35825544595718384
+    ],
+    "base_pos_world": [
+      -0.3400000035762787,
+      -0.46000000834465027,
+      0.23999999463558197
+    ],
+    "target_object_name": "drawer",
+    "target_pos": [
+      0.20000000298023224,
+      -0.10000000149011612,
+      0.4000000059604645
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "red_block": [
+        -0.3281698524951935,
+        -0.08288151770830154,
+        0.45998334884643555
+      ],
+      "blue_block": [
+        0.2728646993637085,
+        -0.14885732531547546,
+        0.459989994764328
+      ],
+      "pink_block": [
+        0.21427030861377716,
+        -0.03993293642997742,
+        0.459989994764328
+      ],
+      "slider": [
+        -0.10000000149011612,
+        -0.10000000149011612,
+        0.550000011920929
+      ],
+      "drawer": [
+        0.20000000298023224,
+        -0.10000000149011612,
+        0.4000000059604645
+      ],
+      "button": [
+        0.10000000149011612,
+        0.0,
+        0.5099999904632568
+      ],
+      "switch": [
+        -0.05000000074505806,
+        0.0,
+        0.5099999904632568
+      ],
+      "bulb": [
+        -0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ],
+      "led": [
+        0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      -0.028524644672870636,
+      0.9890185594558716,
+      0.14501237869262695
+    ],
+    "distance_to_target": 0.2878689467906952,
+    "gripper_to_target_delta": [
+      -0.00821135938167572,
+      0.2847077250480652,
+      0.04174456000328064
+    ],
+    "gripper_to_target_relation": {
+      "x": "aligned_x",
+      "y": "left",
+      "z": "above"
+    }
+  }
+}

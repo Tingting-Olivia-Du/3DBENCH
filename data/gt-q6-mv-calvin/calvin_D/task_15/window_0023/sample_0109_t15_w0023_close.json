@@ -1,0 +1,104 @@
+{
+  "sample_id": 109,
+  "suite": "calvin_D",
+  "task_id": 15,
+  "task_description": "grasp the pink block lying in the cabinet",
+  "init_state_idx": 6603,
+  "frame_type": "close",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0109_t15_w0023_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0109_t15_w0023_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0109_t15_w0023_close_wrist.png"
+  },
+  "calvin_window": [
+    6603,
+    6667
+  ],
+  "calvin_frame_idx": 6666,
+  "calvin_task_class": "lift_pink_block_slider",
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      -0.2016257345676422,
+      0.010231071151793003,
+      0.5376899242401123
+    ],
+    "base_pos_world": [
+      -0.3400000035762787,
+      -0.46000000834465027,
+      0.23999999463558197
+    ],
+    "target_object_name": "pink_block",
+    "target_pos": [
+      -0.20138360559940338,
+      0.012593935243785381,
+      0.5320997834205627
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "red_block": [
+        0.1971926987171173,
+        -0.28055667877197266,
+        0.3623499870300293
+      ],
+      "blue_block": [
+        0.11638421565294266,
+        -0.2694232165813446,
+        0.3623499870300293
+      ],
+      "pink_block": [
+        -0.20138360559940338,
+        0.012593935243785381,
+        0.5320997834205627
+      ],
+      "slider": [
+        -0.10000000149011612,
+        -0.10000000149011612,
+        0.550000011920929
+      ],
+      "drawer": [
+        0.20000000298023224,
+        -0.10000000149011612,
+        0.4000000059604645
+      ],
+      "button": [
+        0.10000000149011612,
+        0.0,
+        0.5099999904632568
+      ],
+      "switch": [
+        -0.05000000074505806,
+        0.0,
+        0.5099999904632568
+      ],
+      "bulb": [
+        -0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ],
+      "led": [
+        0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ]
+    },
+    "can_close": true,
+    "next_direction": [
+      0.03986429050564766,
+      0.38902366161346436,
+      -0.9203648567199707
+    ],
+    "distance_to_target": 0.0060738311149179935,
+    "gripper_to_target_delta": [
+      0.00024212896823883057,
+      0.0023628640919923782,
+      -0.0055901408195495605
+    ],
+    "gripper_to_target_relation": {
+      "x": "aligned_x",
+      "y": "aligned_y",
+      "z": "aligned_z"
+    }
+  }
+}

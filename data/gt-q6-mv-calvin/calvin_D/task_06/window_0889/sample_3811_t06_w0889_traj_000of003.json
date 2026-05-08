@@ -1,0 +1,106 @@
+{
+  "sample_id": 3811,
+  "suite": "calvin_D",
+  "task_id": 6,
+  "task_description": "turn on the yellow light",
+  "init_state_idx": 41649,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_06/window_0889/sample_3811_t06_w0889_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_06/window_0889/sample_3811_t06_w0889_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_06/window_0889/sample_3811_t06_w0889_traj_000of003_wrist.png"
+  },
+  "calvin_window": [
+    41649,
+    41713
+  ],
+  "calvin_frame_idx": 41650,
+  "calvin_task_class": "turn_on_lightbulb",
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.09139459580183029,
+      -0.11076467484235764,
+      0.4868164360523224
+    ],
+    "base_pos_world": [
+      -0.3400000035762787,
+      -0.46000000834465027,
+      0.23999999463558197
+    ],
+    "target_object_name": "bulb",
+    "target_pos": [
+      -0.20000000298023224,
+      0.0,
+      0.550000011920929
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "red_block": [
+        -0.2883138060569763,
+        -0.07999512553215027,
+        0.45998895168304443
+      ],
+      "blue_block": [
+        0.1513310670852661,
+        -0.10460769385099411,
+        0.459989994764328
+      ],
+      "pink_block": [
+        -0.30344104766845703,
+        0.08699456602334976,
+        0.4609900116920471
+      ],
+      "slider": [
+        -0.10000000149011612,
+        -0.10000000149011612,
+        0.550000011920929
+      ],
+      "drawer": [
+        0.20000000298023224,
+        -0.10000000149011612,
+        0.4000000059604645
+      ],
+      "button": [
+        0.10000000149011612,
+        0.0,
+        0.5099999904632568
+      ],
+      "switch": [
+        -0.05000000074505806,
+        0.0,
+        0.5099999904632568
+      ],
+      "bulb": [
+        -0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ],
+      "led": [
+        0.20000000298023224,
+        0.0,
+        0.550000011920929
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      -0.9161188006401062,
+      0.3482343256473541,
+      0.19864356517791748
+    ],
+    "distance_to_target": 0.31807512044906616,
+    "gripper_to_target_delta": [
+      -0.29139459133148193,
+      0.11076467484235764,
+      0.06318357586860657
+    ],
+    "gripper_to_target_relation": {
+      "x": "behind",
+      "y": "left",
+      "z": "above"
+    }
+  },
+  "traj_step": 0,
+  "traj_len": 3
+}
