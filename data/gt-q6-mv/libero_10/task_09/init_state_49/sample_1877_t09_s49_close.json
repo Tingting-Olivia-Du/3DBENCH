@@ -1,0 +1,88 @@
+{
+  "sample_id": 1877,
+  "suite": "libero_10",
+  "task_id": 9,
+  "task_description": "put the yellow and white mug in the microwave and close it",
+  "init_state_idx": 49,
+  "frame_type": "close",
+  "image_path": "gt-q6-mv/libero_10/task_09/init_state_49/sample_1877_t09_s49_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv/libero_10/task_09/init_state_49/sample_1877_t09_s49_close_agent.png",
+    "wrist": "gt-q6-mv/libero_10/task_09/init_state_49/sample_1877_t09_s49_close_wrist.png"
+  },
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.659332606064953,
+      -0.01827413291823499,
+      0.03182213802789424
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "white_yellow_mug_1_main",
+    "target_pos": [
+      0.6960589487282856,
+      -0.02705358702465841,
+      0.02385763987035361
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "porcelain_mug_1_main": [
+        0.5586191270874098,
+        -0.26121948169134884,
+        -0.01439362256594745
+      ],
+      "white_yellow_mug_1_main": [
+        0.6960589487282856,
+        -0.02705358702465841,
+        0.02385763987035361
+      ],
+      "microwave_1_main": [
+        0.6681153552087025,
+        0.3465766380450895,
+        0.007999999999999896
+      ],
+      "microwave_1_microdoorroot": [
+        0.4956153552087025,
+        0.25857663804508946,
+        0.10399999999999998
+      ]
+    },
+    "can_close": true,
+    "next_direction": [
+      0.9516588613756188,
+      -0.227494618100377,
+      -0.20637734929159365
+    ],
+    "distance_to_target": 0.038591920018739435,
+    "gripper_to_target_delta": [
+      0.03672634266333252,
+      -0.008779454106423421,
+      -0.007964498157540634
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "aligned_y",
+      "z": "aligned_z"
+    }
+  }
+}

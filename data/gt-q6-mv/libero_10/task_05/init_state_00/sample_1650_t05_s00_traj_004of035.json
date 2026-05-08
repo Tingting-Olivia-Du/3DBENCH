@@ -1,0 +1,89 @@
+{
+  "sample_id": 1650,
+  "suite": "libero_10",
+  "task_id": 5,
+  "task_description": "pick up the book and place it in the back compartment of the caddy",
+  "init_state_idx": 0,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv/libero_10/task_05/init_state_00/sample_1650_t05_s00_traj_004of035_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv/libero_10/task_05/init_state_00/sample_1650_t05_s00_traj_004of035_agent.png",
+    "wrist": "gt-q6-mv/libero_10/task_05/init_state_00/sample_1650_t05_s00_traj_004of035_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.4600268922010484,
+      0.02743237974377815,
+      0.23138353496813513
+    ],
+    "base_pos_world": [
+      -0.75,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "black_book_1_main",
+    "target_pos": [
+      0.5398708022425082,
+      0.16370790177844372,
+      -0.02904007848000023
+    ],
+    "dest_object_name": "desk_caddy_1_main",
+    "dest_pos": [
+      0.3573813941823863,
+      -0.1319927726139625,
+      -0.025000000000000022
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "black_book_1_main": [
+        0.5398708022425082,
+        0.16370790177844372,
+        -0.02904007848000023
+      ],
+      "white_yellow_mug_1_main": [
+        0.6348318298684764,
+        0.0035846782950301605,
+        -0.026772945626598932
+      ],
+      "desk_caddy_1_main": [
+        0.3573813941823863,
+        -0.1319927726139625,
+        -0.025000000000000022
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.2621477589604232,
+      0.44742701959359377,
+      -0.8550366159467218
+    ],
+    "distance_to_target": 0.30457597790684865,
+    "gripper_to_target_delta": [
+      0.07984391004145974,
+      0.13627552203466556,
+      -0.26042361344813536
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "left",
+      "z": "below"
+    }
+  },
+  "traj_step": 4,
+  "traj_len": 35
+}
