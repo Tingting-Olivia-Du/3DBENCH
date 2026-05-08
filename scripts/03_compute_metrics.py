@@ -22,9 +22,9 @@ Usage
       --out data/runs/20260416_213810/results-stat.json
 
 python scripts/03_compute_metrics.py \
-    --responses_dir data/runs/20260416_213810 \
-    --out data/runs/20260416_213810/results-stat.json \
-    --report data/runs/20260416_213810/results.md
+    --responses_dir data/runs/20260425_051738 \
+    --out data/runs/20260425_051738/results-stat.json \
+    --report data/runs/20260425_051738/results.md
 
       
 """

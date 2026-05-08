@@ -76,6 +76,19 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max_new_tokens", type=int, default=512)
     p.add_argument("--resume",   action="store_true",
                    help="Skip samples that already have a response file")
+    # LoRA-augmented Qwen2.5-VL-3B: pass --lora_dir to load a PEFT adapter
+    # produced by scripts/06_finetune_qwen.py and use the per-dim stripped
+    # prompt for that adapter's dimension. Use slug 'qwen2.5-vl-3b-mv-lora'.
+    p.add_argument("--lora_dir", default=None,
+                   help="Path to a LoRA adapter directory (e.g. models/qwen2.5-vl-3b-mv-lora/q3/final). "
+                        "When set, the model slug 'qwen2.5-vl-3b-mv-lora' loads it.")
+    p.add_argument("--lora_dim", default=None,
+                   choices=[None, "q1", "q2", "q3", "q4", "q5", "q6"],
+                   help="Which dimension this LoRA targets. If omitted, read from "
+                        "<lora_dir>/adapter_meta.json or <lora_dir>/../adapter_meta.json.")
+    p.add_argument("--prompt_yaml", default=None,
+                   help="Override the prompt YAML used by base PromptBuilder. "
+                        "Useful for evaluating on CALVIN with prompts/spatial_qa_calvin.yaml.")
     return p.parse_args()
 
 
@@ -84,19 +97,60 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 class VLMBase(ABC):
-    """Common interface for all VLMs and the random baseline."""
+    """Common interface for all VLMs and the random baseline.
+
+    Dual-view contract: callers pass an `image_paths` dict like
+        {"agent": "/abs/path/sample_xxx_agent.png",
+         "wrist": "/abs/path/sample_xxx_wrist.png"}
+    Subclasses decide how to consume it: native multi-image models stream both
+    images into the model; single-image models concatenate them side-by-side.
+    """
 
     slug: str  # used as directory name under out_dir
+    # Set to True by subclasses that natively accept multiple images.
+    # Single-image models (PaliGemma, KosMos2) leave this False and the base
+    # helper concatenates the two views horizontally before inference.
+    supports_multi_image: bool = False
 
     @abstractmethod
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
-        """Return the model's text response given one image and two prompt strings."""
+        """Return the model's text response given dual-view images and prompts.
+
+        `image_paths` is a dict with at minimum a "agent" key; "wrist" is
+        optional but expected for the spatial QA benchmark.
+        """
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared across single-image models
+# ---------------------------------------------------------------------------
+
+def _hconcat_views(image_paths: dict, target_size: int = 448):
+    """Combine agent + wrist views into a single PIL.Image, side by side.
+
+    Used by models that don't natively support multi-image input. Each view is
+    resized to target_size×target_size and placed left (agent) and right
+    (wrist). Returns a target_size × 2*target_size RGB image.
+    If only one view is present the function returns that view resized to a
+    square target_size×target_size.
+    """
+    from PIL import Image
+    if "agent" in image_paths and "wrist" in image_paths:
+        agent = Image.open(image_paths["agent"]).convert("RGB").resize((target_size, target_size))
+        wrist = Image.open(image_paths["wrist"]).convert("RGB").resize((target_size, target_size))
+        out = Image.new("RGB", (target_size * 2, target_size))
+        out.paste(agent, (0, 0))
+        out.paste(wrist, (target_size, 0))
+        return out
+    # Fallback: single view
+    only = next(iter(image_paths.values()))
+    return Image.open(only).convert("RGB").resize((target_size, target_size))
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +159,7 @@ class VLMBase(ABC):
 
 class Qwen25VL(VLMBase):
     slug = "qwen2.5-vl-7b"
+    supports_multi_image = True
     _DEFAULT_MODEL_ID = "Qwen/Qwen2.5-VL-7B-Instruct"
 
     def __init__(self, model_id: str = _DEFAULT_MODEL_ID, device: str = "cuda"):
@@ -124,22 +179,26 @@ class Qwen25VL(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
         from qwen_vl_utils import process_vision_info
 
+        # Stream both views, with explicit text labels so the model knows which is which.
+        user_content: list = []
+        if "agent" in image_paths:
+            user_content.append({"type": "text", "text": "[AGENT VIEW] (third-person, full workspace)"})
+            user_content.append({"type": "image", "image": f"file://{Path(image_paths['agent']).resolve()}"})
+        if "wrist" in image_paths:
+            user_content.append({"type": "text", "text": "[WRIST VIEW] (first-person, mounted on the gripper)"})
+            user_content.append({"type": "image", "image": f"file://{Path(image_paths['wrist']).resolve()}"})
+        user_content.append({"type": "text", "text": user_prompt})
+
         messages = [
             {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": f"file://{Path(image_path).resolve()}"},
-                    {"type": "text", "text": user_prompt},
-                ],
-            },
+            {"role": "user", "content": user_content},
         ]
 
         text = self._processor.apply_chat_template(
@@ -185,6 +244,55 @@ class Qwen25VL3B(Qwen25VL):
         super().__init__(model_id=model_id, device=device)
 
 
+class Qwen25VL3B_LoRA(Qwen25VL3B):
+    """Qwen2.5-VL-3B with a per-dimension LoRA adapter merged at load time.
+
+    Constructed via build_model() with `lora_dir` set. The dimension can be
+    inferred from <lora_dir>/adapter_meta.json (or its parent), in which case
+    the eval driver swaps the default `PromptBuilder` for `PerDimPromptBuilder`.
+
+    The merged-and-unloaded weights are equivalent to the base model with LoRA
+    applied; subsequent inference uses Qwen25VL.generate() unchanged.
+
+    The instance `slug` is rewritten at construction time to include the
+    target dim (e.g. "qwen2.5-vl-3b-mv-lora-q3"), so each adapter writes its
+    responses to an independent output directory. This is critical: without it,
+    multiple --lora_dir invocations in the same --out_dir clobber each other,
+    or worse, --resume silently skips them all because sample_<id>.json from a
+    previous dim already exists.
+    """
+    slug = "qwen2.5-vl-3b-mv-lora"  # class default; instance overrides below
+
+    def __init__(
+        self,
+        model_id: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        device: str = "cuda",
+        lora_dir: str | None = None,
+    ):
+        if lora_dir is None:
+            raise ValueError("Qwen25VL3B_LoRA requires lora_dir")
+        super().__init__(model_id=model_id, device=device)
+        from peft import PeftModel
+        print(f"  [LoRA] loading adapter from {lora_dir}")
+        peft_model = PeftModel.from_pretrained(self._model, lora_dir)
+        self._model = peft_model.merge_and_unload()
+        self._model.eval()
+        # Stash the dim if the adapter has metadata, so the eval loop can pick it up.
+        meta_path = Path(lora_dir) / "adapter_meta.json"
+        if not meta_path.exists():
+            meta_path = Path(lora_dir).parent / "adapter_meta.json"
+        if meta_path.exists():
+            self.lora_meta = json.loads(meta_path.read_text())
+            print(f"  [LoRA] dim={self.lora_meta.get('dim')}")
+        else:
+            self.lora_meta = {}
+        # Rewrite the instance slug to include the dim → unique output dir.
+        dim = self.lora_meta.get("dim")
+        if dim:
+            self.slug = f"qwen2.5-vl-3b-mv-lora-{dim}"
+            print(f"  [LoRA] output slug = {self.slug}")
+
+
 # ---------------------------------------------------------------------------
 # Qwen3-VL  (shares the same transformers class as Qwen2.5-VL)
 # ---------------------------------------------------------------------------
@@ -193,6 +301,7 @@ class Qwen3VL(VLMBase):
     """Qwen3-VL family — uses Qwen3VLForConditionalGeneration (distinct from Qwen2.5-VL)."""
 
     slug = "qwen3-vl-2b"
+    supports_multi_image = True
 
     def __init__(self, model_id: str = "Qwen/Qwen3-VL-2B-Instruct", device: str = "cuda"):
         import torch
@@ -211,22 +320,25 @@ class Qwen3VL(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
         from qwen_vl_utils import process_vision_info
 
+        user_content: list = []
+        if "agent" in image_paths:
+            user_content.append({"type": "text", "text": "[AGENT VIEW] (third-person, full workspace)"})
+            user_content.append({"type": "image", "image": f"file://{Path(image_paths['agent']).resolve()}"})
+        if "wrist" in image_paths:
+            user_content.append({"type": "text", "text": "[WRIST VIEW] (first-person, mounted on the gripper)"})
+            user_content.append({"type": "image", "image": f"file://{Path(image_paths['wrist']).resolve()}"})
+        user_content.append({"type": "text", "text": user_prompt})
+
         messages = [
             {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": f"file://{Path(image_path).resolve()}"},
-                    {"type": "text", "text": user_prompt},
-                ],
-            },
+            {"role": "user", "content": user_content},
         ]
 
         text = self._processor.apply_chat_template(
@@ -304,14 +416,19 @@ class PaliGemma(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
-        from PIL import Image
-        image = Image.open(image_path).convert("RGB")
-        prompt = f"{system_prompt}\n\n{user_prompt}"
+        # PaliGemma is single-image — concatenate agent + wrist horizontally.
+        image = _hconcat_views(image_paths, target_size=448)
+        layout_note = (
+            "The image you see is two views concatenated side by side: "
+            "LEFT half = AGENT VIEW (third-person workspace), "
+            "RIGHT half = WRIST VIEW (first-person from the gripper).\n\n"
+        )
+        prompt = f"{system_prompt}\n\n{layout_note}{user_prompt}"
         inputs = self._processor(
             text=prompt,
             images=image,
@@ -359,14 +476,18 @@ class KosMos2(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
-        from PIL import Image
-        image = Image.open(image_path).convert("RGB")
-        prompt = f"<grounding>{system_prompt}\n\n{user_prompt}"
+        # Kosmos-2 is single-image — concatenate agent + wrist horizontally.
+        image = _hconcat_views(image_paths, target_size=224)
+        layout_note = (
+            "The image is two views concatenated: LEFT = AGENT VIEW (workspace), "
+            "RIGHT = WRIST VIEW (gripper-mounted).\n\n"
+        )
+        prompt = f"<grounding>{system_prompt}\n\n{layout_note}{user_prompt}"
         inputs = self._processor(
             text=prompt,
             images=image,
@@ -391,6 +512,7 @@ class KosMos2(VLMBase):
 
 class InternVL2(VLMBase):
     slug = "internvl2-8b"
+    supports_multi_image = True
 
     # Preprocessing constants used by InternVL2
     _MEAN = (0.485, 0.456, 0.406)
@@ -431,14 +553,28 @@ class InternVL2(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
-        pixel_values = self._load_pixel_values(image_path)
-        # InternVL2 uses <image> token in the question
-        question = f"<image>\n{system_prompt}\n\n{user_prompt}"
+        # InternVL2 native multi-image: stack pixel_values along dim 0 and pass
+        # one <image> token per view + a num_patches_list of [1, 1, ...].
+        view_order = [v for v in ("agent", "wrist") if v in image_paths]
+        per_view = [self._load_pixel_values(image_paths[v]) for v in view_order]
+        pixel_values = self._torch.cat(per_view, dim=0)
+        num_patches_list = [1] * len(view_order)
+
+        # Two <image> tokens, one per view, with explicit labels.
+        view_labels = {
+            "agent": "Agent view (third-person workspace):",
+            "wrist": "Wrist view (first-person from gripper):",
+        }
+        image_block = "\n".join(
+            f"{view_labels[v]} <image>" for v in view_order
+        )
+        question = f"{system_prompt}\n\n{image_block}\n\n{user_prompt}"
+
         gen_config = {
             "max_new_tokens": max_new_tokens,
             "do_sample": False,
@@ -448,6 +584,7 @@ class InternVL2(VLMBase):
             pixel_values,
             question,
             gen_config,
+            num_patches_list=num_patches_list,
         )
         return response
 
@@ -511,7 +648,7 @@ class RandomBaseline(VLMBase):
 
     def generate(
         self,
-        image_path: str,
+        image_paths: dict,
         system_prompt: str,
         user_prompt: str,
         max_new_tokens: int = 512,
@@ -535,8 +672,9 @@ class RandomBaseline(VLMBase):
 
 _MODEL_REGISTRY: dict[str, type[VLMBase]] = {
     # Qwen2.5-VL
-    "qwen2.5-vl-3b":      Qwen25VL3B,
-    "qwen2.5-vl-7b":      Qwen25VL,
+    "qwen2.5-vl-3b":         Qwen25VL3B,
+    "qwen2.5-vl-3b-mv-lora": Qwen25VL3B_LoRA,
+    "qwen2.5-vl-7b":         Qwen25VL,
     # Qwen3-VL
     "qwen3-vl-2b":        Qwen3VL,
     "qwen3-vl-4b":        Qwen3VL4B,
@@ -633,7 +771,7 @@ def _free_model(model: VLMBase) -> None:
         pass
 
 
-def build_model(slug: str, device: str) -> VLMBase:
+def build_model(slug: str, device: str, lora_dir: str | None = None) -> VLMBase:
     if slug not in _MODEL_REGISTRY:
         raise ValueError(
             f"Unknown model '{slug}'. Available: {sorted(_MODEL_REGISTRY.keys())}"
@@ -641,6 +779,12 @@ def build_model(slug: str, device: str) -> VLMBase:
     cls = _MODEL_REGISTRY[slug]
     if slug == "random":
         return cls()
+    if slug == "qwen2.5-vl-3b-mv-lora":
+        if lora_dir is None:
+            raise ValueError("--lora_dir is required when using slug 'qwen2.5-vl-3b-mv-lora'")
+        # Always resolve the base model id from the qwen2.5-vl-3b slug.
+        model_id = _resolve_model_id("qwen2.5-vl-3b")
+        return cls(model_id=model_id, device=device, lora_dir=lora_dir)
     model_id = _resolve_model_id(slug)
     return cls(model_id=model_id, device=device)
 
@@ -703,7 +847,13 @@ def run_model(
             n_skip += 1
             continue
 
-        image_path = str(data_root / record["image_path"])
+        # Resolve dual-view image paths (new schema). Fall back to single-image
+        # legacy manifests by treating the lone image_path as the agent view.
+        rel_paths = record.get("image_paths")
+        if rel_paths is None:
+            rel_paths = {"agent": record["image_path"]}
+        image_paths = {k: str(data_root / v) for k, v in rel_paths.items()}
+
         task_desc = record["task_description"]
 
         system_prompt, user_prompt = builder.build(task_desc)
@@ -712,7 +862,7 @@ def run_model(
         sample_ts = datetime.datetime.now().isoformat(timespec="seconds")
         try:
             raw_response = model.generate(
-                image_path=image_path,
+                image_paths=image_paths,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 max_new_tokens=max_new_tokens,
@@ -732,7 +882,8 @@ def run_model(
             "run_timestamp": effective_ts,
             "sample_timestamp": sample_ts,
             "task_description": task_desc,
-            "image_path": record["image_path"],
+            "image_path": record["image_path"],          # legacy / agent view
+            "image_paths": rel_paths,                    # full dual-view dict
             "raw_response": raw_response,
             "elapsed_s": round(elapsed, 3),
         }
@@ -770,11 +921,13 @@ def main() -> None:
     run_ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     print(f"Run timestamp: {run_ts}")
 
-    builder = PromptBuilder()
+    # Default builder: full 6-question prompt (optionally overridden via --prompt_yaml,
+    # e.g. for CALVIN). Per-LoRA evaluation uses PerDimPromptBuilder, picked below.
+    builder = PromptBuilder(template_path=args.prompt_yaml) if args.prompt_yaml else PromptBuilder()
 
     for slug in args.models:
         try:
-            model = build_model(slug, args.device)
+            model = build_model(slug, args.device, lora_dir=args.lora_dir)
         except ValueError as exc:
             print(f"Skipping: {exc}")
             continue
@@ -782,12 +935,39 @@ def main() -> None:
             print(f"ERROR loading model '{slug}': {exc}")
             continue
 
+        # If this is a LoRA-augmented model, swap the prompt builder for the
+        # per-dim one matching this adapter's dimension. Dim is taken from CLI
+        # --lora_dim or the adapter's metadata file (set by 06_finetune_qwen.py).
+        # Critically, also make `model.slug` carry the dim so that 6 different
+        # adapters write to 6 distinct output dirs (otherwise --resume silently
+        # skips runs because sample_NNNN.json from a previous adapter exists).
+        active_builder = builder
+        if slug == "qwen2.5-vl-3b-mv-lora":
+            from bench.per_dim_prompt_builder import PerDimPromptBuilder, VALID_DIMS
+            dim = args.lora_dim
+            if dim is None:
+                dim = getattr(model, "lora_meta", {}).get("dim")
+            if dim not in VALID_DIMS:
+                print(f"ERROR: could not determine LoRA dim (got {dim!r}); pass --lora_dim.")
+                _free_model(model)
+                continue
+            # Override the instance slug so each dim writes to its own output dir.
+            # (Qwen25VL3B_LoRA also sets this from adapter_meta in __init__; we
+            # repeat here so a CLI --lora_dim wins over a stale meta file.)
+            model.slug = f"qwen2.5-vl-3b-mv-lora-{dim}"
+            # If --prompt_yaml is supplied (e.g. CALVIN-aware per-dim prompts),
+            # honour it; otherwise PerDimPromptBuilder loads the default LIBERO
+            # template (prompts/spatial_qa_per_dim.yaml).
+            active_builder = PerDimPromptBuilder(dim, template_path=args.prompt_yaml)
+            tag = args.prompt_yaml if args.prompt_yaml else "default (LIBERO)"
+            print(f"  [LoRA] PerDimPromptBuilder({dim})  template={tag}  slug={model.slug}")
+
         try:
             run_model(
                 model=model,
                 manifest=manifest,
                 out_dir=out_dir,
-                builder=builder,
+                builder=active_builder,
                 max_new_tokens=args.max_new_tokens,
                 resume=args.resume,
                 data_root=data_root,

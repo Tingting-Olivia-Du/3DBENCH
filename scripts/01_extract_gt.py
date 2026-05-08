@@ -88,7 +88,7 @@ from bench.gt_extractor import (
     CLOSE_THRESHOLD,
     extract_gt_from_obs,
     find_target_object,
-    get_agentview_image,
+    get_views,
     get_all_object_positions,
     get_robot_base_pos,
     get_sim_from_env,
@@ -212,10 +212,10 @@ def extract_frame(
     init_state,
     task_description: str,
     n_wait: int,
-) -> tuple[dict, np.ndarray] | None:
-    """Reset env to init_state, settle, and extract GT + image.
+) -> tuple[dict, dict] | None:
+    """Reset env to init_state, settle, and extract GT + dual-view images.
 
-    Returns (gt_dict, image_array) or None on failure.
+    Returns (gt_dict, images_dict) where images_dict has keys 'agent' and 'wrist'.
     """
     try:
         env.reset()
@@ -231,8 +231,8 @@ def extract_frame(
 
         sim = get_sim_from_env(env)
         gt = extract_gt_from_obs(raw_obs, sim, task_description)
-        image = get_agentview_image(raw_obs)
-        return gt, image
+        images = get_views(raw_obs)
+        return gt, images
 
     except Exception as exc:
         print(f"    WARNING: Frame extraction failed: {exc}")
@@ -279,8 +279,8 @@ def extract_close_frame(
 
             if dist < CLOSE_THRESHOLD:
                 gt = extract_gt_from_obs(raw_obs, sim, task_description)
-                image = get_agentview_image(raw_obs)
-                return gt, image
+                images = get_views(raw_obs)
+                return gt, images
 
             # Delta action toward target (world frame, normalised)
             direction = (target_rel - eef_rel) / (dist + 1e-8)
@@ -312,13 +312,14 @@ def extract_traj_frames(
     n_wait: int,
     max_steps: int,
     n_frames: int,
-) -> list[tuple[dict, np.ndarray, int, int]]:
+) -> list[tuple[dict, dict, int, int]]:
     """Run P-controller from init_state → target and uniformly sample n_frames.
 
-    Returns a list of (gt, image, traj_step, traj_len) tuples sampled at
-    evenly-spaced steps across the full approach trajectory.  The list always
-    includes the first frame (traj_step=0) and, when the target is reached,
-    the final near-grasp frame.
+    Returns a list of (gt, images, traj_step, traj_len) tuples where `images`
+    is a dict {'agent': ndarray, 'wrist': ndarray}, sampled at evenly-spaced
+    steps across the full approach trajectory.  The list always includes the
+    first frame (traj_step=0) and, when the target is reached, the final
+    near-grasp frame.
 
     If the robot never reaches the target within max_steps the full run up to
     that point is still sampled — useful for long-range tasks.
@@ -337,7 +338,7 @@ def extract_traj_frames(
         sim = get_sim_from_env(env)
 
         # ── Collect every frame of the approach run ───────────────────────
-        frames: list[tuple[dict, np.ndarray]] = []
+        frames: list[tuple[dict, dict]] = []
 
         for _ in range(max_steps):
             base_pos = get_robot_base_pos(sim)
@@ -346,9 +347,9 @@ def extract_traj_frames(
             all_objects = get_all_object_positions(sim, base_pos)
             _, target_rel = find_target_object(all_objects, task_description)
 
-            gt    = extract_gt_from_obs(raw_obs, sim, task_description)
-            image = get_agentview_image(raw_obs)
-            frames.append((gt, image))
+            gt     = extract_gt_from_obs(raw_obs, sim, task_description)
+            images = get_views(raw_obs)
+            frames.append((gt, images))
 
             if gt["can_close"]:
                 break  # reached target — stop collecting
@@ -375,8 +376,8 @@ def extract_traj_frames(
         for idx in indices:
             if idx not in seen:
                 seen.add(idx)
-                gt, image = frames[idx]
-                sampled.append((gt, image, int(idx), traj_len))
+                gt, images = frames[idx]
+                sampled.append((gt, images, int(idx), traj_len))
 
         return sampled
 
@@ -387,7 +388,7 @@ def extract_traj_frames(
 
 def _save_record(
     gt: dict,
-    image: np.ndarray,
+    images: dict,             # {"agent": ndarray, "wrist": ndarray}
     sample_id: int,
     suite_name: str,
     task_id: int,
@@ -400,23 +401,33 @@ def _save_record(
     traj_step: int | None = None,
     traj_len:  int | None = None,
 ) -> int:
-    """Save PNG + JSON for one sample and append to manifest. Returns next sample_id."""
-    # Build descriptive filename suffix encoding episode identity and frame type:
-    #   init  → sample_0000_t00_s00_init
-    #   traj  → sample_0001_t00_s00_traj_000of034  (step / full trajectory length)
-    #   close → sample_0002_t00_s00_close
+    """Save dual-view PNGs + JSON for one sample and append to manifest.
+
+    Writes two PNGs per sample with `_agent` / `_wrist` suffixes:
+      sample_0000_t00_s00_init_agent.png
+      sample_0000_t00_s00_init_wrist.png
+    The manifest record carries:
+      - image_path        : legacy field, points to the AGENT view (back-compat)
+      - image_paths       : {"agent": "...", "wrist": "..."}  (new, preferred)
+    Returns next sample_id.
+    """
     if frame_type == "traj" and traj_step is not None and traj_len is not None:
         type_suffix = f"traj_{traj_step:03d}of{traj_len:03d}"
     else:
         type_suffix = frame_type  # "init" or "close"
     stem = f"sample_{sample_id:04d}_t{task_id:02d}_s{init_state_idx:02d}_{type_suffix}"
 
-    img_path = out_dir / f"{stem}.png"
-    Image.fromarray(image).save(img_path)
-
-    # image_path is stored relative to data_root so it stays valid regardless
-    # of where the caller places out_dir.
     _data_root = data_root if data_root is not None else out_dir.parent
+    rel_paths: dict = {}
+    for view_name in ("agent", "wrist"):
+        if view_name not in images:
+            raise KeyError(
+                f"_save_record: missing view '{view_name}' in images dict; got keys {list(images.keys())}"
+            )
+        png_path = out_dir / f"{stem}_{view_name}.png"
+        Image.fromarray(images[view_name]).save(png_path)
+        rel_paths[view_name] = str(png_path.resolve().relative_to(_data_root.resolve()))
+
     record: dict = {
         "sample_id": sample_id,
         "suite": suite_name,
@@ -424,7 +435,10 @@ def _save_record(
         "task_description": task_desc,
         "init_state_idx": init_state_idx,
         "frame_type": frame_type,
-        "image_path": str(img_path.resolve().relative_to(_data_root.resolve())),
+        # legacy: agent view, kept so older single-image consumers keep working
+        "image_path": rel_paths["agent"],
+        # new: dual-view dict
+        "image_paths": rel_paths,
         "gt": gt,
     }
     if traj_step is not None:
@@ -525,11 +539,11 @@ def _extract_suite(
             if result is None:
                 continue
 
-            gt, image = result
+            gt, images = result
             state_out_dir = task_out_dir / f"init_state_{int(state_idx):02d}"
             state_out_dir.mkdir(parents=True, exist_ok=True)
             sample_id = _save_record(
-                gt, image, sample_id, suite_name, tid, task_desc,
+                gt, images, sample_id, suite_name, tid, task_desc,
                 int(state_idx), "init", state_out_dir, manifest,
                 data_root=data_root,
             )
@@ -548,9 +562,9 @@ def _extract_suite(
                     continue
                 state_out_dir = task_out_dir / f"init_state_{int(state_idx):02d}"
                 state_out_dir.mkdir(parents=True, exist_ok=True)
-                for gt, image, t_step, t_len in traj_samples:
+                for gt, images, t_step, t_len in traj_samples:
                     sample_id = _save_record(
-                        gt, image, sample_id, suite_name, tid, task_desc,
+                        gt, images, sample_id, suite_name, tid, task_desc,
                         int(state_idx), "traj", state_out_dir, manifest,
                         data_root=data_root, traj_step=t_step, traj_len=t_len,
                     )
@@ -568,11 +582,11 @@ def _extract_suite(
                 )
                 if result is None:
                     continue
-                gt, image = result
+                gt, images = result
                 state_out_dir = task_out_dir / f"init_state_{int(state_idx):02d}"
                 state_out_dir.mkdir(parents=True, exist_ok=True)
                 sample_id = _save_record(
-                    gt, image, sample_id, suite_name, tid, task_desc,
+                    gt, images, sample_id, suite_name, tid, task_desc,
                     int(state_idx), "close", state_out_dir, manifest,
                     data_root=data_root,
                 )
