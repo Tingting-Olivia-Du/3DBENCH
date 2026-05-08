@@ -324,3 +324,21 @@ def get_agentview_image(raw_obs: dict) -> np.ndarray:
     """
     img = raw_obs["agentview_image"]
     return img[::-1, ::-1].copy()
+
+
+def get_wrist_image(raw_obs: dict) -> np.ndarray:
+    """Return the wrist-mounted (eye-in-hand) RGB image, flipped to match display.
+
+    LIBERO renders both `agentview_image` and `robot0_eye_in_hand_image`
+    upside-down, so apply the same H+W flip as `get_agentview_image`.
+    """
+    img = raw_obs["robot0_eye_in_hand_image"]
+    return img[::-1, ::-1].copy()
+
+
+def get_views(raw_obs: dict) -> dict:
+    """Return both available views as a dict {'agent': ndarray, 'wrist': ndarray}."""
+    return {
+        "agent": get_agentview_image(raw_obs),
+        "wrist": get_wrist_image(raw_obs),
+    }
