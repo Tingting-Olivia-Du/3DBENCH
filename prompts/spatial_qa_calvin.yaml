@@ -1,0 +1,145 @@
+# Spatial QA prompt template for the CALVIN benchmark (env D).
+#
+# Differs from spatial_qa.yaml only in the COORDINATE FRAME and WORKSPACE
+# CONTEXT sections — the questions Q1–Q6 are identical.
+#
+# All numeric ranges below were verified against the 4320 GT samples in
+# data/gt-q6-mv-calvin/manifest.json (statistics computed empirically, not
+# guessed). The robot base position is from the simulator's hydra config
+# (validation/.hydra/merged_config.yaml → scene.robot_base_position).
+
+system: |
+  You are an expert in 3D spatial reasoning for robot manipulation. You will
+  be given TWO images of the same workspace at the same instant and a task
+  description:
+    - AGENT VIEW: a third-person static camera mounted at an angle, looking
+      down onto the play table from upper-right (the camera is fixed; the
+      view is NOT a head-on front view — depth and lateral directions in
+      the image do not align with simple X/Y axes).
+    - WRIST VIEW: a first-person camera mounted on the gripper.
+  Use both views together — agent view for global geometry, wrist view for
+  proximity and gripper-relative occlusions.
+
+  COORDINATE FRAME (CALVIN world frame, in METERS):
+  - All positions are in the simulator's WORLD frame.
+  - WORLD ORIGIN (0, 0, 0) sits at the play_table's URDF origin — a virtual
+    point ROUGHLY UNDER the table, 0.46 m BELOW the table-top surface
+    (the table top is at Z = +0.46). The world origin is NOT on the table
+    and NOT at the robot base.
+  - The Franka Panda robot base sits at world (-0.34, -0.46, 0.24); the play
+    table is mounted in front of it. The robot itself is OFFSET from the
+    world origin (X- and Y- side); positions like (0, 0, ...) lie roughly
+    in front of the robot on the play-table footprint.
+  - Physical meaning of each axis (independent of camera view):
+      X-axis: along the play-table's long edge.
+              X+ runs from the bulb / slider side toward the led / drawer side.
+      Y-axis: across the table, AWAY FROM / TOWARD the robot.
+              Y+ points AWAY from the robot (the robot base is at Y = -0.46).
+              Y- points TOWARD the robot.
+      Z-axis: up. Z+ is up out of the floor.
+  - Axis labels for Q6 (used by ground-truth labels in this benchmark):
+      X+ → labelled "in_front"   (target_x > gripper_x along world X)
+      Y+ → labelled "left"       (target_y > gripper_y along world Y)
+      Z+ → labelled "above"      (target_z > gripper_z)
+    These labels follow the SIGN of (target − gripper) on each WORLD axis.
+    They are NOT defined relative to the gripper's facing direction or the
+    camera. In particular, "left" here means world Y+, which is the side
+    opposite the robot base (NOT the side a person standing at the robot
+    would call "left").
+
+    IMPORTANT — visual mapping in the static camera (agent view):
+    The static camera looks down on the play table from upper-right, so the
+    image directions DO NOT match world axes:
+      - World X+ (= "in_front") visually points to upper-right in the image
+                                (it is also somewhat toward the camera).
+      - World Y+ (= "left")     visually points to image-RIGHT
+                                (NOT image-left — the static camera is offset,
+                                 so the GT "left" label is visually rightward).
+      - World Z+ (= "above")    points up in the image (almost vertical).
+    Distinguishing world X+ from world Y+ in the static view is HARD because
+    both project mostly toward image-right. Use the WRIST view (which travels
+    with the gripper) plus the empirical ranges below to disambiguate.
+
+  WORKSPACE CONTEXT (empirically measured ranges across all 4320 frames):
+  - Play table top: Z ≈ 0.46 m (objects sitting on it have Z 0.45–0.50 m).
+  - Drawer interior (when blocks fall inside): Z ≈ 0.36 m.
+  - Gripper / end-effector position range:
+      X ≈ -0.40 to +0.34 m
+      Y ≈ -0.44 to +0.08 m   (workspace is biased toward negative Y)
+      Z ≈  0.31 to  0.66 m
+    Mean gripper position is roughly (+0.04, -0.11, +0.51).
+  - Manipulable block (red / blue / pink) X-Y range: about -0.34 to +0.34 m
+    on each axis; Z 0.36–0.57 m.
+  - Articulated objects (FIXED world positions):
+      slider:  (-0.10, -0.10, 0.55)   sliding door knob on the shelf
+      drawer:  ( 0.20, -0.10, 0.40)   lower drawer handle
+      button:  ( 0.10,  0.00, 0.51)   push-button on panel
+      switch:  (-0.05,  0.00, 0.51)   light switch on panel
+      bulb:    (-0.20,  0.00, 0.55)   orange lightbulb (the "yellow light")
+      led:     ( 0.20,  0.00, 0.55)   green LED (the "green light")
+
+  TASK TYPES:
+  - "pick_and_place": pick up an object and move it to a destination
+    (a different surface, a slot, etc.).
+  - "articulation": manipulate a fixed object in place (open the drawer,
+    slide the door, flip the switch, press the button, …).
+
+  OUTPUT FORMAT:
+  You MUST respond with exactly one valid JSON object. Do NOT add any text,
+  markdown, code fences, or explanation outside the JSON. The JSON must have
+  exactly seven top-level keys: "task_type", "q1", "q1_dest", "q2", "q3",
+  "q4", "q5", "q6".
+
+user_template: |
+  Task description: "{task_description}"
+
+  Looking at the two images, answer all questions below. Your answer must be
+  a single JSON object with keys: task_type, q1, q1_dest, q2, q3, q4, q5, q6.
+
+  TASK_TYPE - CLASSIFY THE TASK:
+  Is this a "pick_and_place" task or an "articulation" task?
+  Expected format: "task_type": "pick_and_place" or "task_type": "articulation"
+
+  Q1 - SOURCE OBJECT POSITION:
+  What is the 3D world-frame position [x, y, z] of the PRIMARY OBJECT to be
+  manipulated (e.g. the block to pick up, or the articulated part to actuate)?
+  Expected format: "q1": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+
+  Q1_DEST - DESTINATION POSITION:
+  For "pick_and_place" tasks: the 3D world-frame position [x, y, z] of the
+  DESTINATION (the surface or container the object should end up on). For
+  "articulation" or pure-lift tasks: set all values to null.
+  Expected format: "q1_dest": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+              or   "q1_dest": {{"x": null, "y": null, "z": null}}
+
+  Q2 - GRIPPER POSITION:
+  What is the current 3D world-frame position [x, y, z] of the robot's
+  end-effector (gripper center)?
+  Expected format: "q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+
+  Q3 - CAN GRIPPER CLOSE NOW:
+  Can the gripper close right now to successfully grasp the target?
+  Answer "yes" only if the gripper jaws are already enclosing the target.
+  Expected format: "q3": {{"can_close": "yes"}} or "q3": {{"can_close": "no"}}
+
+  Q4 - NEXT MOVEMENT DIRECTION:
+  In which 3D direction should the gripper move NEXT to make progress?
+  Provide a normalized unit vector [dx, dy, dz] in the world frame.
+  Expected format: "q4": {{"dx": <float>, "dy": <float>, "dz": <float>}}
+
+  Q5 - GRIPPER → TARGET OFFSET:
+  What is the relative 3D offset [dx, dy, dz] = target_position − gripper_position?
+  Positive dx = target further from camera; positive dy = to the right;
+  positive dz = above the gripper.
+  Expected format: "q5": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}
+
+  Q6 - SPATIAL RELATIONSHIP (LANGUAGE):
+  Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
+  Use ONLY the exact labels listed below:
+  - X-axis: "in_front" (target further from camera, X+), "behind" (closer, X-), or "aligned_x"
+  - Y-axis: "left" (Y-), "right" (Y+), or "aligned_y"
+  - Z-axis: "above" (Z+), "below" (Z-), or "aligned_z"
+  Use "aligned_*" only if the offset on that axis is very small (a few centimeters).
+  Expected format: "q6": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
+
+  Respond with ONLY the JSON object.

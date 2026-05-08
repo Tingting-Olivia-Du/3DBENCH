@@ -1,0 +1,196 @@
+# Per-dimension single-question prompts for the spatial QA benchmark.
+#
+# These are stripped variants of prompts/spatial_qa.yaml — each section asks
+# ONE dimension only. Used by:
+#   - scripts/05_prepare_finetune_data.py  (build per-dim training jsonl)
+#   - scripts/06_finetune_qwen.py          (load prompt for SFT)
+#   - scripts/02_run_vlm_eval.py + PerDimPromptBuilder (run LoRA-augmented eval)
+#
+# Coordinate frame definition (same as spatial_qa.yaml):
+#   Origin : robot arm base center (mounted on the workspace table)
+#   X-axis : forward direction (positive = further from robot)
+#   Y-axis : robot's LEFT direction (positive = to the robot's left)
+#   Z-axis : upward (positive = higher); units in meters.
+
+# Dual-view note shared across all dimensions.
+shared_view_note: |
+  You will receive TWO images of the same workspace at the same instant:
+    - AGENT VIEW: third-person camera framing the entire workspace.
+    - WRIST VIEW: first-person camera mounted on the gripper.
+  Use both — agent view for global geometry/scale, wrist view for proximity
+  and gripper-relative occlusions.
+
+# Coordinate-frame block reused by Q1/Q2/Q5 (the metric questions that need it).
+shared_frame_block: |
+  COORDINATE FRAME:
+  - Origin: the robot arm's base center.
+  - X-axis: forward (positive = further into the workspace).
+  - Y-axis: left   (positive = to the robot's left when it faces forward).
+  - Z-axis: up     (positive = higher).
+  - All distances are in METERS.
+
+  WORKSPACE CONTEXT (approximate, for scale reference):
+  - Table surface ≈ Z = -0.01 m.
+  - Objects on the table: Z ≈ -0.02 to +0.05 m.
+  - Gripper grasping at the table: Z ≈ 0.10 to 0.30 m; raised: Z ≈ 0.40 to 0.60 m.
+  - Workspace extends roughly: X 0.10–0.80 m, Y -0.35–0.35 m.
+  - Typical object size: 5–15 cm.
+
+# ---------------------------------------------------------------------------
+# Q1 (folded with Q1_dest): source object position + destination position
+# ---------------------------------------------------------------------------
+q1:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+    {shared_frame_block}
+
+    TASK TYPES:
+    - "pick_and_place": pick up an object and place it on a destination (a basket, plate, shelf …).
+    - "articulation":   manipulate a fixed object in place (open a drawer, turn a switch …).
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the keys
+    "task_type", "q1", and "q1_dest". No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q1 — SOURCE OBJECT POSITION:
+    What is the 3D position [x, y, z] of the PRIMARY OBJECT to be manipulated
+    (the object to pick up, or the articulated object such as a cabinet door)?
+
+    Q1_DEST — DESTINATION POSITION:
+    For "pick_and_place" tasks: the 3D position [x, y, z] of the DESTINATION
+    (container, plate, shelf, etc.). For "articulation" tasks: set all three
+    components to null.
+
+    Output format:
+      {{"task_type": "pick_and_place" | "articulation",
+        "q1":      {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}},
+        "q1_dest": {{"x": <float|null>,  "y": <float|null>,  "z": <float|null>}}}}
+
+# ---------------------------------------------------------------------------
+# Q2: end-effector / gripper position
+# ---------------------------------------------------------------------------
+q2:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+    {shared_frame_block}
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q2".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q2 — GRIPPER POSITION:
+    What is the current 3D position [x, y, z] of the robot's end-effector
+    (gripper center)?
+
+    Output format:
+      {{"q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}}}
+
+# ---------------------------------------------------------------------------
+# Q3: binary can_close
+# ---------------------------------------------------------------------------
+q3:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+
+    Your job is to decide whether the gripper is currently positioned closely
+    enough around the target object that closing the gripper jaws RIGHT NOW
+    would successfully grasp it. Be strict: answer "yes" only if the jaws are
+    already enclosing the target.
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q3".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q3 — CAN GRIPPER CLOSE NOW:
+    Based on the current gripper and target object positions visible in the
+    images, can the gripper close right now to successfully grasp the target?
+
+    Output format:
+      {{"q3": {{"can_close": "yes" | "no"}}}}
+
+# ---------------------------------------------------------------------------
+# Q4: next-movement unit direction vector
+# ---------------------------------------------------------------------------
+q4:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+    {shared_frame_block}
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q4".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q4 — NEXT MOVEMENT DIRECTION:
+    In which 3D direction should the gripper move NEXT to make progress on
+    the task? Provide a NORMALIZED unit vector [dx, dy, dz] (length ≈ 1.0).
+
+    Output format:
+      {{"q4": {{"dx": <float>, "dy": <float>, "dz": <float>}}}}
+
+# ---------------------------------------------------------------------------
+# Q5: gripper → target offset vector (not normalized)
+# ---------------------------------------------------------------------------
+q5:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+    {shared_frame_block}
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q5".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q5 — GRIPPER-TO-TARGET OFFSET:
+    Compute the 3D offset target_position − gripper_position, in meters.
+    Positive dx = target is further forward; positive dy = to the robot's
+    left; positive dz = above the gripper.
+
+    Output format:
+      {{"q5": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}}}
+
+# ---------------------------------------------------------------------------
+# Q6: per-axis categorical spatial relation
+# ---------------------------------------------------------------------------
+q6:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation.
+    {shared_view_note}
+
+    Use ONLY the exact axis labels listed below — no other words, no synonyms.
+    "aligned_*" applies only when the offset on that axis is very small
+    (a few centimeters or less).
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q6".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q6 — TARGET RELATIVE TO GRIPPER:
+    Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
+    - X-axis: "in_front" (target further from robot, X+) | "behind" (closer, X-) | "aligned_x"
+    - Y-axis: "left" (Y+) | "right" (Y-) | "aligned_y"
+    - Z-axis: "above" (Z+) | "below" (Z-) | "aligned_z"
+
+    Output format:
+      {{"q6": {{"x": <x-label>, "y": <y-label>, "z": <z-label>}}}}
