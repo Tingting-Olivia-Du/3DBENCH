@@ -18,7 +18,7 @@ set -euo pipefail
 
 # ---------- defaults ----------------------------------------
 ENV_NAME="vlmbench"
-ENV_PREFIX="/umd-datapool/tingting/envs/vlmbench"
+ENV_PREFIX="/workspace/tingting/envs/vlmbench"
 CUDA_VER="12.8"      # server driver supports CUDA 12.8
 PYTHON_VER="3.12"    # lerobot requires >=3.12
 
@@ -106,6 +106,12 @@ ok "PyTorch 2.10.0+cu128 installed."
 #   gymnasium, hydra-core, easydict, einops, opencv-python, etc.
 log "Step 2/5 — LeRobot + LIBERO (lerobot[libero])"
 
+# cmake is required to build egl_probe / hf-egl-probe C extensions
+if ! command -v cmake &>/dev/null; then
+  log "  Installing cmake (needed by egl_probe)..."
+  pip install --cache-dir "$PIP_CACHE" cmake
+fi
+
 pip install --cache-dir "$PIP_CACHE" "lerobot[libero]"
 ok "LeRobot + hf-libero installed from PyPI."
 
@@ -135,6 +141,7 @@ pip install --cache-dir "$PIP_CACHE" \
     "transformers>=4.45" \
     "accelerate>=0.30" \
     "qwen-vl-utils>=0.0.8" \
+    "peft>=0.18" \
     sentencepiece \
     decord
 

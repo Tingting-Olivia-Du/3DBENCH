@@ -1,0 +1,82 @@
+{
+  "sample_id": 3317,
+  "suite": "libero_10",
+  "task_id": 6,
+  "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+  "init_state_idx": 27,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv-test/libero_10/task_06/init_state_27/sample_3317_t06_s27_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_06/init_state_27/sample_3317_t06_s27_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_06/init_state_27/sample_3317_t06_s27_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.46694208872095655,
+      -0.007224640901725774,
+      0.27974896527704757
+    ],
+    "base_pos_world": [
+      -0.51,
+      0.0,
+      0.42
+    ],
+    "target_object_name": "porcelain_mug_1_main",
+    "target_pos": [
+      0.3868250865089289,
+      -0.1299546347832311,
+      0.014369980429524476
+    ],
+    "dest_object_name": "chocolate_pudding_1_main",
+    "dest_pos": [
+      0.48157152753675525,
+      0.11173092961408831,
+      0.029839921520000035
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "porcelain_mug_1_main": [
+        0.3868250865089289,
+        -0.1299546347832311,
+        0.014369980429524476
+      ],
+      "red_coffee_mug_1_main": [
+        0.33141442080234396,
+        -0.014334670128035961,
+        0.018599097993059366
+      ],
+      "plate_1_main": [
+        0.6833357104179938,
+        -0.021153732545876817,
+        0.019272908174620573
+      ],
+      "chocolate_pudding_1_main": [
+        0.48157152753675525,
+        0.11173092961408831,
+        0.029839921520000035
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      -0.26427097782810044,
+      -0.4048326147559352,
+      -0.8753692959589411
+    ],
+    "distance_to_target": 0.30316231797553317,
+    "gripper_to_target_delta": [
+      -0.08011700221202767,
+      -0.12272999388150534,
+      -0.2653789848475231
+    ],
+    "gripper_to_target_relation": {
+      "x": "behind",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}

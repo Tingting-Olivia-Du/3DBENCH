@@ -1,0 +1,97 @@
+{
+  "sample_id": 1389,
+  "suite": "libero_object",
+  "task_id": 5,
+  "task_description": "pick up the tomato sauce and place it in the basket",
+  "init_state_idx": 38,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv-test/libero_object/task_05/init_state_38/sample_1389_t05_s38_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_05/init_state_38/sample_1389_t05_s38_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_05/init_state_38/sample_1389_t05_s38_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.4501828426193766,
+      -0.010828058835661826,
+      0.26137988410886237
+    ],
+    "base_pos_world": [
+      -0.6,
+      0.0,
+      0.0
+    ],
+    "target_object_name": "tomato_sauce_1_main",
+    "target_pos": [
+      0.6502390974120272,
+      -0.09993923005860599,
+      0.03839259641983711
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.6044889126884953,
+      0.272401802527209,
+      -0.0045823453265843445
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tomato_sauce_1_main": [
+        0.6502390974120272,
+        -0.09993923005860599,
+        0.03839259641983711
+      ],
+      "basket_1_main": [
+        0.6044889126884953,
+        0.272401802527209,
+        -0.0045823453265843445
+      ],
+      "milk_1_main": [
+        0.4837791094542269,
+        -0.2442032430646115,
+        0.06973547626138664
+      ],
+      "butter_1_main": [
+        0.44872606107510427,
+        0.0557881897266436,
+        0.008695477418599518
+      ],
+      "orange_juice_1_main": [
+        0.7000000652057504,
+        -0.20000162784621045,
+        0.06973547626138667
+      ],
+      "chocolate_pudding_1_main": [
+        0.749999887443521,
+        0.03,
+        0.013065477418601574
+      ],
+      "bbq_sauce_1_main": [
+        0.3905843921862614,
+        -0.07836765962104335,
+        0.0546254774182291
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.6400804404464957,
+      -0.2851113942136068,
+      -0.7134483321498435
+    ],
+    "distance_to_target": 0.3125486144414896,
+    "gripper_to_target_delta": [
+      0.20005625479265066,
+      -0.08911117122294415,
+      -0.22298728768902526
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "sample_id": 3508,
+  "suite": "libero_10",
+  "task_id": 8,
+  "task_description": "put both moka pots on the stove",
+  "init_state_idx": 1,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_10/task_08/init_state_01/sample_3508_t08_s01_traj_128of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_08/init_state_01/sample_3508_t08_s01_traj_128of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_08/init_state_01/sample_3508_t08_s01_traj_128of300_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.7578224520576088,
+      0.30175140445224,
+      0.03430300851072521
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "moka_pot_1_main",
+    "target_pos": [
+      0.8051010511000924,
+      0.315135867254205,
+      0.030742874040771695
+    ],
+    "dest_object_name": "flat_stove_1_main",
+    "dest_pos": [
+      0.46741948687590873,
+      -0.19025852729905826,
+      -0.007000000000000006
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "moka_pot_1_main": [
+        0.8051010511000924,
+        0.315135867254205,
+        0.030742874040771695
+      ],
+      "moka_pot_2_main": [
+        0.6940124036634279,
+        0.0343895147593844,
+        0.054107926940162865
+      ],
+      "flat_stove_1_main": [
+        0.46741948687590873,
+        -0.19025852729905826,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_base": [
+        0.46741948687590873,
+        -0.19025852729905826,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner": [
+        0.6174194868759086,
+        -0.19025852729905826,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner_plate": [
+        0.6174194868759086,
+        -0.19025852729905826,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_button": [
+        0.46741948687590873,
+        -0.19025852729905826,
+        -0.007000000000000006
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.959670546496961,
+      0.2716805275932139,
+      -0.07226432808029916
+    ],
+    "distance_to_target": 0.049265447621647286,
+    "gripper_to_target_delta": [
+      0.04727859904248366,
+      0.01338446280196498,
+      -0.003560134469953513
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "aligned_y",
+      "z": "aligned_z"
+    }
+  },
+  "traj_step": 128,
+  "traj_len": 300
+}

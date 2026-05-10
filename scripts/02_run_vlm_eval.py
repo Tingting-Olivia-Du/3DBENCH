@@ -705,7 +705,7 @@ _MODEL_HF_ID: dict[str, str] = {
     "internvl2-8b":     "OpenGVLab/InternVL2-8B",
 }
 
-_LOCAL_MODEL_ROOT = Path("/umd-datapool/tingting/models")
+_LOCAL_MODEL_ROOT = Path("/workspace/tingting/models")
 
 
 def _is_local_complete(local: Path) -> bool:

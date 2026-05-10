@@ -32,13 +32,22 @@ Usage
       --task_ids 1 \\
       --libero_path /path/to/LIBERO
 
-        # Custom options
-
+  # Build a TEST set using init states the training set never saw.
+  # Training used --n_states 5 → indices [0,12,24,36,49].
+  # Pass --exclude_n_states 5 to skip those and sample from the remaining 45.
   python scripts/01_extract_gt.py \\
-      --suite libero_goal \\
+      --suite all \\
       --n_states 10 \\
-      --out_dir data/gt-q6-test \\
-      --task_ids 1 
+      --exclude_n_states 5 \\
+      --n_traj_frames 8 \\
+      --n_close 3 \\
+      --out_dir data/gt-q6-mv-test
+
+  # Or use explicit indices:
+  python scripts/01_extract_gt.py \\
+      --suite libero_spatial \\
+      --state_indices 3 7 15 20 28 33 42 \\
+      --out_dir data/gt-q6-mv-test
  
 
 # 激活环境
@@ -136,6 +145,21 @@ def parse_args() -> argparse.Namespace:
                    ))
     p.add_argument("--libero_path", default=None,
                    help="Optional path prepended to sys.path for LIBERO import")
+
+    # ── Test-set construction: exclude training init states ──────────────
+    p.add_argument("--exclude_n_states", type=int, default=0,
+                   help=(
+                       "Exclude the N init-state indices that *would* have been selected "
+                       "by --n_states=N on the full pool (i.e. np.linspace(0, 49, N)).  "
+                       "Use this to build a test set from states the training set never saw.  "
+                       "E.g. if training used --n_states 5, pass --exclude_n_states 5 here "
+                       "to skip indices [0,12,24,36,49].  (default: 0 = no exclusion)"
+                   ))
+    p.add_argument("--state_indices", type=int, nargs="*", default=None,
+                   help=(
+                       "Explicit list of init-state indices to use (0-based).  "
+                       "Overrides --n_states.  E.g. --state_indices 3 7 15 28 42"
+                   ))
     return p.parse_args()
 
 
@@ -467,6 +491,49 @@ def _save_record(
 ALL_SUITES = ["libero_spatial", "libero_object", "libero_goal", "libero_10"]
 
 
+def _resolve_state_indices(
+    n_total: int, args: argparse.Namespace
+) -> np.ndarray:
+    """Decide which init-state indices to use for a task.
+
+    Priority:
+      1. --state_indices  (explicit list)
+      2. --n_states + --exclude_n_states  (uniform sample minus training set)
+      3. --n_states  (original behaviour)
+    """
+    if args.state_indices is not None:
+        idx = np.array(sorted(set(args.state_indices)), dtype=int)
+        idx = idx[(idx >= 0) & (idx < n_total)]
+        if len(idx) == 0:
+            raise ValueError(
+                f"--state_indices produced no valid indices for pool size {n_total}"
+            )
+        return idx
+
+    # Indices that the *training* run would have picked
+    exclude_set: set[int] = set()
+    if args.exclude_n_states > 0:
+        train_idx = np.linspace(0, n_total - 1, args.exclude_n_states, dtype=int)
+        exclude_set = set(train_idx.tolist())
+
+    # Candidate pool: uniform sample of n_states from [0, n_total)
+    n_want = min(args.n_states, n_total)
+    if exclude_set:
+        # Sample from the remaining indices
+        remaining = np.array([i for i in range(n_total) if i not in exclude_set])
+        if len(remaining) == 0:
+            raise ValueError(
+                f"--exclude_n_states={args.exclude_n_states} excludes ALL "
+                f"{n_total} states — nothing left to sample"
+            )
+        n_want = min(n_want, len(remaining))
+        idx = remaining[np.linspace(0, len(remaining) - 1, n_want, dtype=int)]
+    else:
+        idx = np.linspace(0, n_total - 1, n_want, dtype=int)
+
+    return idx
+
+
 def _resolve_suites(suite_arg: str, bench_dict: dict) -> list[str]:
     """Expand 'all' or comma-separated suite names into a validated list."""
     if suite_arg.strip().lower() == "all":
@@ -528,8 +595,10 @@ def _extract_suite(
         #   <suite_out_dir>/task_00/init_state_00/sample_0000.png
         task_out_dir = suite_out_dir / f"task_{tid:02d}"
 
-        n_to_sample = min(args.n_states, len(init_states))
-        state_indices = np.linspace(0, len(init_states) - 1, n_to_sample, dtype=int)
+        state_indices = _resolve_state_indices(len(init_states), args)
+        if args.exclude_n_states > 0:
+            print(f"    (excluded {args.exclude_n_states} training indices, "
+                  f"using {len(state_indices)}: {state_indices.tolist()})")
 
         env = _make_env(task, get_libero_path_fn, OffScreenRenderEnv, args.obs_size)
 
@@ -551,8 +620,7 @@ def _extract_suite(
         # ── Trajectory frames (start → near-grasp, uniformly sampled) ────────
         n_traj_frames = getattr(args, "n_traj_frames", 0)
         if n_traj_frames > 0:
-            traj_indices = np.linspace(0, len(init_states) - 1, n_to_sample, dtype=int)
-            for state_idx in tqdm(traj_indices, desc=f"  Task {tid} (traj)", leave=False):
+            for state_idx in tqdm(state_indices, desc=f"  Task {tid} (traj)", leave=False):
                 traj_samples = extract_traj_frames(
                     env, init_states[state_idx], task_desc,
                     args.n_wait, args.close_max_steps, n_traj_frames,
@@ -572,8 +640,10 @@ def _extract_suite(
         # ── Extra can_close=True frames (P-controller approach) ───────────────
         n_close = getattr(args, "n_close", 0)
         if n_close > 0:
-            # Use a different spread of init states so we're not just repeating
-            close_indices = np.linspace(0, len(init_states) - 1, n_close, dtype=int)
+            # Sample close-frame init states from the same allowed pool
+            close_indices = state_indices[
+                np.linspace(0, len(state_indices) - 1, min(n_close, len(state_indices)), dtype=int)
+            ]
             n_found = 0
             for state_idx in tqdm(close_indices, desc=f"  Task {tid} (close)", leave=False):
                 result = extract_close_frame(
@@ -633,6 +703,7 @@ def main() -> None:
         print(f"Each suite → {base_out_dir}/<suite_name>/")
 
     global_id = 0
+    all_records: list[dict] = []
 
     for suite_name in suite_names:
         task_suite = bench_dict[suite_name]()
@@ -644,6 +715,12 @@ def main() -> None:
             OffScreenRenderEnv, suite_dir, args, global_id,
             data_root=data_root,
         )
+        all_records.extend(records)
+
+    # Write merged top-level manifest covering all suites
+    top_manifest = base_out_dir / "manifest.json"
+    top_manifest.write_text(json.dumps(all_records, indent=2))
+    print(f"\nTop-level manifest: {len(all_records)} samples → {top_manifest}")
 
     # Overall summary
     print(f"\n{'='*60}")

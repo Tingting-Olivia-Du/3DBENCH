@@ -1,0 +1,99 @@
+{
+  "sample_id": 1840,
+  "suite": "libero_object",
+  "task_id": 9,
+  "task_description": "pick up the orange juice and place it in the basket",
+  "init_state_idx": 48,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1840_t09_s48_traj_015of028_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1840_t09_s48_traj_015of028_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1840_t09_s48_traj_015of028_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.5403204433080829,
+      -0.037550396032149665,
+      0.1621966782915
+    ],
+    "base_pos_world": [
+      -0.6,
+      0.0,
+      0.0
+    ],
+    "target_object_name": "orange_juice_1_main",
+    "target_pos": [
+      0.6500000652057281,
+      -0.1000016278461096,
+      0.06973547730149787
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.612502401421514,
+      0.26564877625940936,
+      -0.004582345326536154
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "orange_juice_1_main": [
+        0.6500000652057281,
+        -0.1000016278461096,
+        0.06973547730149787
+      ],
+      "basket_1_main": [
+        0.612502401421514,
+        0.26564877625940936,
+        -0.004582345326536154
+      ],
+      "butter_1_main": [
+        0.47968272856642014,
+        -0.24322726598826566,
+        0.008695477418608112
+      ],
+      "chocolate_pudding_1_main": [
+        0.44999988744352104,
+        0.05999999999999999,
+        0.013065477418608112
+      ],
+      "bbq_sauce_1_main": [
+        0.6907627715085389,
+        -0.20448230632000833,
+        0.05462547741860809
+      ],
+      "ketchup_1_main": [
+        0.7500029300127791,
+        0.030002414638954134,
+        0.07240547676577395
+      ],
+      "salad_dressing_1_main": [
+        0.4000007061649611,
+        -0.079991297413632,
+        0.07270545369900476
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.7010200564724908,
+      -0.39915861575320377,
+      -0.5909680870345639
+    ],
+    "distance_to_target": 0.1564571810534912,
+    "gripper_to_target_delta": [
+      0.10967962189764513,
+      -0.06245123181395993,
+      -0.09246120099000213
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  },
+  "traj_step": 15,
+  "traj_len": 28
+}

@@ -1,0 +1,104 @@
+{
+  "sample_id": 2929,
+  "suite": "libero_10",
+  "task_id": 1,
+  "task_description": "put both the cream cheese box and the butter in the basket",
+  "init_state_idx": 43,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_10/task_01/init_state_43/sample_2929_t01_s43_traj_006of045_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_01/init_state_43/sample_2929_t01_s43_traj_006of045_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_01/init_state_43/sample_2929_t01_s43_traj_006of045_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.4596956480011371,
+      -0.026744366556100546,
+      0.2044316943020939
+    ],
+    "base_pos_world": [
+      -0.51,
+      0.0,
+      0.42
+    ],
+    "target_object_name": "cream_cheese_1_main",
+    "target_pos": [
+      0.6102122758895016,
+      -0.2077681538866285,
+      0.025695921520000053
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.5110556359035674,
+      0.26130564007693735,
+      0.012192105164770373
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "alphabet_soup_1_main": [
+        0.4386774145978974,
+        -0.13469675915345675,
+        0.05517026121638663
+      ],
+      "cream_cheese_1_main": [
+        0.6102122758895016,
+        -0.2077681538866285,
+        0.025695921520000053
+      ],
+      "tomato_sauce_1_main": [
+        0.38801169907195576,
+        0.02868198730920447,
+        0.0551692784892428
+      ],
+      "ketchup_1_main": [
+        0.2782065177978784,
+        -0.14198324861332823,
+        0.08917983877459573
+      ],
+      "orange_juice_1_main": [
+        0.5303311828348416,
+        -0.22718380205463987,
+        0.0865099215127641
+      ],
+      "milk_1_main": [
+        0.5495641587189641,
+        -0.07687314467004984,
+        0.08650992151276421
+      ],
+      "butter_1_main": [
+        0.5382561365848494,
+        0.03680761093532609,
+        0.025469921520000105
+      ],
+      "basket_1_main": [
+        0.5110556359035674,
+        0.26130564007693735,
+        0.012192105164770373
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.5092135757363658,
+      -0.6124225033016665,
+      -0.6046819095487351
+    ],
+    "distance_to_target": 0.29558643967946985,
+    "gripper_to_target_delta": [
+      0.15051662788836445,
+      -0.18102378733052796,
+      -0.17873577278209385
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  },
+  "traj_step": 6,
+  "traj_len": 45
+}

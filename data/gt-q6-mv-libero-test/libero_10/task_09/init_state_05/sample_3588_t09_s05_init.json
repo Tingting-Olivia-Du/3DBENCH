@@ -1,0 +1,88 @@
+{
+  "sample_id": 3588,
+  "suite": "libero_10",
+  "task_id": 9,
+  "task_description": "put the yellow and white mug in the microwave and close it",
+  "init_state_idx": 5,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv-test/libero_10/task_09/init_state_05/sample_3588_t09_s05_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_09/init_state_05/sample_3588_t09_s05_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_09/init_state_05/sample_3588_t09_s05_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.45102480961319036,
+      -0.02519953345687872,
+      0.25572728596553873
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "white_yellow_mug_1_main",
+    "target_pos": [
+      0.6467725329458337,
+      0.01591568287461334,
+      -0.011905925170530018
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "porcelain_mug_1_main": [
+        0.5373337754585761,
+        -0.2540177629387517,
+        -0.014393622566509334
+      ],
+      "white_yellow_mug_1_main": [
+        0.6467725329458337,
+        0.01591568287461334,
+        -0.011905925170530018
+      ],
+      "microwave_1_main": [
+        0.6540010503378925,
+        0.34935319789737745,
+        0.007999999999999896
+      ],
+      "microwave_1_microdoorroot": [
+        0.4815010503378925,
+        0.26135319789737743,
+        0.10399999999999998
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.5858631801538241,
+      0.12305579335779396,
+      -0.801012862481703
+    ],
+    "distance_to_target": 0.3341184938115549,
+    "gripper_to_target_delta": [
+      0.19574772333264334,
+      0.04111521633149206,
+      -0.26763321113606875
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "left",
+      "z": "below"
+    }
+  }
+}

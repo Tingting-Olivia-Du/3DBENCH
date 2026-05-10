@@ -1,0 +1,99 @@
+{
+  "sample_id": 1415,
+  "suite": "libero_object",
+  "task_id": 5,
+  "task_description": "pick up the tomato sauce and place it in the basket",
+  "init_state_idx": 10,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_object/task_05/init_state_10/sample_1415_t05_s10_traj_028of029_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_05/init_state_10/sample_1415_t05_s10_traj_028of029_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_05/init_state_10/sample_1415_t05_s10_traj_028of029_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.6224593256847524,
+      -0.08891911187167308,
+      0.05386259523564729
+    ],
+    "base_pos_world": [
+      -0.6,
+      0.0,
+      0.0
+    ],
+    "target_object_name": "tomato_sauce_1_main",
+    "target_pos": [
+      0.6502390974120272,
+      -0.09993923005860601,
+      0.038392596419837194
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.585382359910434,
+      0.26139594296157476,
+      -0.004582345326536154
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tomato_sauce_1_main": [
+        0.6502390974120272,
+        -0.09993923005860601,
+        0.038392596419837194
+      ],
+      "basket_1_main": [
+        0.585382359910434,
+        0.26139594296157476,
+        -0.004582345326536154
+      ],
+      "milk_1_main": [
+        0.4772597180507465,
+        -0.2388265281475544,
+        0.06973547730149796
+      ],
+      "butter_1_main": [
+        0.45452379772304463,
+        0.05737143404619164,
+        0.008695477418608114
+      ],
+      "orange_juice_1_main": [
+        0.7000000652057281,
+        -0.20000162784611394,
+        0.06973547730149786
+      ],
+      "chocolate_pudding_1_main": [
+        0.749999887443521,
+        0.03,
+        0.013065477418608112
+      ],
+      "bbq_sauce_1_main": [
+        0.4015696602506049,
+        -0.07190461893834361,
+        0.05462547741860809
+      ]
+    },
+    "can_close": true,
+    "next_direction": [
+      0.82549316506119,
+      -0.3274696542069841,
+      -0.4597006199808931
+    ],
+    "distance_to_target": 0.033652334026552086,
+    "gripper_to_target_delta": [
+      0.02777977172727486,
+      -0.011020118186932937,
+      -0.015469998815810099
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "aligned_y",
+      "z": "aligned_z"
+    }
+  },
+  "traj_step": 28,
+  "traj_len": 29
+}

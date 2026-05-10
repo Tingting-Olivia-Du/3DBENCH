@@ -1,0 +1,99 @@
+{
+  "sample_id": 971,
+  "suite": "libero_object",
+  "task_id": 0,
+  "task_description": "pick up the alphabet soup and place it in the basket",
+  "init_state_idx": 27,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_object/task_00/init_state_27/sample_0971_t00_s27_traj_019of046_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_00/init_state_27/sample_0971_t00_s27_traj_019of046_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_00/init_state_27/sample_0971_t00_s27_traj_019of046_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.46111444606241014,
+      -0.13306704136273706,
+      0.12355499379831666
+    ],
+    "base_pos_world": [
+      -0.6,
+      0.0,
+      0.0
+    ],
+    "target_object_name": "alphabet_soup_1_main",
+    "target_pos": [
+      0.48090574451786255,
+      -0.23978121719843146,
+      0.03839291037244388
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.585368798033708,
+      0.2548910530270284,
+      -0.004582345326536154
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "alphabet_soup_1_main": [
+        0.48090574451786255,
+        -0.23978121719843146,
+        0.03839291037244388
+      ],
+      "basket_1_main": [
+        0.585368798033708,
+        0.2548910530270284,
+        -0.004582345326536154
+      ],
+      "salad_dressing_1_main": [
+        0.6500007061649611,
+        -0.09999129741363207,
+        0.0727054536990048
+      ],
+      "cream_cheese_1_main": [
+        0.44711194821403805,
+        0.05816803079425326,
+        0.008921477418608112
+      ],
+      "milk_1_main": [
+        0.7019292777416984,
+        -0.19568658711918732,
+        0.06973547730149798
+      ],
+      "tomato_sauce_1_main": [
+        0.7502390974120274,
+        0.03006076994139232,
+        0.03839259641983718
+      ],
+      "butter_1_main": [
+        0.40318034377582534,
+        -0.08114679614718301,
+        0.008695477418608112
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.14345969105311007,
+      -0.7735309904418309,
+      -0.6173079651754269
+    ],
+    "distance_to_target": 0.137957208120053,
+    "gripper_to_target_delta": [
+      0.01979129845545241,
+      -0.1067141758356944,
+      -0.08516208342587278
+    ],
+    "gripper_to_target_relation": {
+      "x": "aligned_x",
+      "y": "right",
+      "z": "below"
+    }
+  },
+  "traj_step": 19,
+  "traj_len": 46
+}

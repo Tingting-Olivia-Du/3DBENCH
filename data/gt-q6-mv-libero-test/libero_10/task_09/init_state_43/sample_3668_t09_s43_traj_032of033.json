@@ -1,0 +1,90 @@
+{
+  "sample_id": 3668,
+  "suite": "libero_10",
+  "task_id": 9,
+  "task_description": "put the yellow and white mug in the microwave and close it",
+  "init_state_idx": 43,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_10/task_09/init_state_43/sample_3668_t09_s43_traj_032of033_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_09/init_state_43/sample_3668_t09_s43_traj_032of033_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_09/init_state_43/sample_3668_t09_s43_traj_032of033_wrist.png"
+  },
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.6471799167589982,
+      0.013970976130542892,
+      0.032892601686126954
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "white_yellow_mug_1_main",
+    "target_pos": [
+      0.6850001662205321,
+      0.012364737564276612,
+      0.02585174887682773
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "porcelain_mug_1_main": [
+        0.5821273164686162,
+        -0.2436009352476676,
+        -0.01439362256594745
+      ],
+      "white_yellow_mug_1_main": [
+        0.6850001662205321,
+        0.012364737564276612,
+        0.02585174887682773
+      ],
+      "microwave_1_main": [
+        0.6562691687343855,
+        0.35378838758870396,
+        0.007999999999999896
+      ],
+      "microwave_1_microdoorroot": [
+        0.48376916873438547,
+        0.26578838758870393,
+        0.10399999999999998
+      ]
+    },
+    "can_close": true,
+    "next_direction": [
+      0.9822530677631653,
+      -0.04171661429360057,
+      -0.18286233882822686
+    ],
+    "distance_to_target": 0.03850356970394601,
+    "gripper_to_target_delta": [
+      0.03782024946153384,
+      -0.0016062385662662798,
+      -0.007040852809299225
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "aligned_y",
+      "z": "aligned_z"
+    }
+  },
+  "traj_step": 32,
+  "traj_len": 33
+}

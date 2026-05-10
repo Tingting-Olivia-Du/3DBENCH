@@ -1,0 +1,97 @@
+{
+  "sample_id": 1111,
+  "suite": "libero_object",
+  "task_id": 2,
+  "task_description": "pick up the salad dressing and place it in the basket",
+  "init_state_idx": 38,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv-test/libero_object/task_02/init_state_38/sample_1111_t02_s38_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_02/init_state_38/sample_1111_t02_s38_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_02/init_state_38/sample_1111_t02_s38_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.4555117944740613,
+      0.006824325842814904,
+      0.2665840568067179
+    ],
+    "base_pos_world": [
+      -0.6,
+      0.0,
+      0.0
+    ],
+    "target_object_name": "salad_dressing_1_main",
+    "target_pos": [
+      0.6500007061661082,
+      -0.09999129744571157,
+      0.07270544927976626
+    ],
+    "dest_object_name": "basket_1_main",
+    "dest_pos": [
+      0.6113284711472834,
+      0.27489704611322374,
+      -0.0045823453265843445
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "salad_dressing_1_main": [
+        0.6500007061661082,
+        -0.09999129744571157,
+        0.07270544927976626
+      ],
+      "basket_1_main": [
+        0.6113284711472834,
+        0.27489704611322374,
+        -0.0045823453265843445
+      ],
+      "ketchup_1_main": [
+        0.48000293001341077,
+        -0.23999758536024893,
+        0.07240547270045593
+      ],
+      "alphabet_soup_1_main": [
+        0.4509057445180176,
+        0.060218782801672636,
+        0.03839291036997594
+      ],
+      "cream_cheese_1_main": [
+        0.6988232462711188,
+        -0.19694433797945385,
+        0.008921477418607878
+      ],
+      "milk_1_main": [
+        0.7451547754048748,
+        0.028282238780696797,
+        0.06973547626138663
+      ],
+      "tomato_sauce_1_main": [
+        0.40023909741202746,
+        -0.07993923005860598,
+        0.038392596419837076
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.6600455071136424,
+      -0.3625048421925964,
+      -0.6579742912348592
+    ],
+    "distance_to_target": 0.29465985238281606,
+    "gripper_to_target_delta": [
+      0.19448891169204685,
+      -0.10681562328852648,
+      -0.19387860752695163
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}

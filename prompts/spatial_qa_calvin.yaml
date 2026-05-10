@@ -143,3 +143,6 @@ user_template: |
   Expected format: "q6": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
 
   Respond with ONLY the JSON object.
+
+
+# camera 的位置坐标，只用world coordinates

@@ -1,3 +1,31 @@
+# Pipeline
+
+conda activate /workspace/tingting/envs/vlmbench
+
+cd /workspace/tingting/3DBENCH
+
+for dim in q1 q2 q3 q4 q5 q6; do
+    python scripts/02_run_vlm_eval.py \
+        --manifest data/gt-q6-mv-test/manifest.json \
+        --models qwen2.5-vl-3b-mv-lora \
+        --out_dir data/lora-libero-test-0508 \
+        --lora_dir models/${dim}/final \
+        --lora_dim ${dim} \
+        --device cuda:3 \
+        --resume
+    done
+
+
+## test set
+python scripts/01_extract_gt.py \
+    --suite all \
+    --n_states 10 \
+    --exclude_n_states 5 \
+    --n_traj_frames 8 \
+    --n_close 3 \
+    --out_dir data/gt-q6-mv-test
+
+
 # 3DBENCH: VLM Spatial Reasoning Benchmark in LIBERO
 
 Fine-grained zero-shot evaluation of VLMs on 3D spatial reasoning tasks

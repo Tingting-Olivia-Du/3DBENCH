@@ -1,0 +1,89 @@
+{
+  "sample_id": 3202,
+  "suite": "libero_10",
+  "task_id": 4,
+  "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+  "init_state_idx": 38,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_10/task_04/init_state_38/sample_3202_t04_s38_traj_299of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_04/init_state_38/sample_3202_t04_s38_traj_299of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_04/init_state_38/sample_3202_t04_s38_traj_299of300_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.5142671071076031,
+      0.0767261958459493,
+      0.08738899503289294
+    ],
+    "base_pos_world": [
+      -0.51,
+      0.0,
+      0.42
+    ],
+    "target_object_name": "white_yellow_mug_1_main",
+    "target_pos": [
+      0.4520750096170291,
+      0.0969620748838593,
+      0.03036516555831853
+    ],
+    "dest_object_name": "porcelain_mug_1_main",
+    "dest_pos": [
+      0.4085963702567523,
+      -0.1622047124848118,
+      0.014369980429524476
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "porcelain_mug_1_main": [
+        0.4085963702567523,
+        -0.1622047124848118,
+        0.014369980429524476
+      ],
+      "red_coffee_mug_1_main": [
+        0.3270276699951302,
+        -0.01077576666860388,
+        0.018599097993059366
+      ],
+      "white_yellow_mug_1_main": [
+        0.4520750096170291,
+        0.0969620748838593,
+        0.03036516555831853
+      ],
+      "plate_1_main": [
+        0.4961508774278655,
+        -0.2884866079426639,
+        0.019272908174620573
+      ],
+      "plate_2_main": [
+        0.5267212543235302,
+        0.31221786324034795,
+        0.019272908174620573
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      -0.7167450184288638,
+      0.23321235461063713,
+      -0.6571823005942644
+    ],
+    "distance_to_target": 0.08677018450285404,
+    "gripper_to_target_delta": [
+      -0.06219209749057403,
+      0.020235879037910007,
+      -0.057023829474574406
+    ],
+    "gripper_to_target_relation": {
+      "x": "behind",
+      "y": "left",
+      "z": "below"
+    }
+  },
+  "traj_step": 299,
+  "traj_len": 300
+}

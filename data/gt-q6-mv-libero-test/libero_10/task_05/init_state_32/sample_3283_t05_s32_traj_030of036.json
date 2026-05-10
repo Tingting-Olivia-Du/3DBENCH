@@ -1,0 +1,89 @@
+{
+  "sample_id": 3283,
+  "suite": "libero_10",
+  "task_id": 5,
+  "task_description": "pick up the book and place it in the back compartment of the caddy",
+  "init_state_idx": 32,
+  "frame_type": "traj",
+  "image_path": "gt-q6-mv-test/libero_10/task_05/init_state_32/sample_3283_t05_s32_traj_030of036_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_05/init_state_32/sample_3283_t05_s32_traj_030of036_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_05/init_state_32/sample_3283_t05_s32_traj_030of036_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.5556279461223128,
+      0.171152113807656,
+      0.06403586945696871
+    ],
+    "base_pos_world": [
+      -0.75,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "black_book_1_main",
+    "target_pos": [
+      0.5751567965835712,
+      0.16657677820620434,
+      -0.019663209264181525
+    ],
+    "dest_object_name": "desk_caddy_1_main",
+    "dest_pos": [
+      0.35251387703160164,
+      -0.13032724969376358,
+      -0.025000000000000022
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "black_book_1_main": [
+        0.5751567965835712,
+        0.16657677820620434,
+        -0.019663209264181525
+      ],
+      "white_yellow_mug_1_main": [
+        0.6613386937537182,
+        -0.010689458453952434,
+        -0.026772945626598932
+      ],
+      "desk_caddy_1_main": [
+        0.35251387703160164,
+        -0.13032724969376358,
+        -0.025000000000000022
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.22689802864524689,
+      -0.05315902389745163,
+      -0.9724666589529797
+    ],
+    "distance_to_target": 0.08606884148734319,
+    "gripper_to_target_delta": [
+      0.019528850461258407,
+      -0.004575335601451652,
+      -0.08369907872115023
+    ],
+    "gripper_to_target_relation": {
+      "x": "aligned_x",
+      "y": "aligned_y",
+      "z": "below"
+    }
+  },
+  "traj_step": 30,
+  "traj_len": 36
+}

@@ -1,0 +1,143 @@
+{
+  "sample_id": 1854,
+  "suite": "libero_goal",
+  "task_id": 0,
+  "task_description": "open the middle drawer of the cabinet",
+  "init_state_idx": 38,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv-test/libero_goal/task_00/init_state_38/sample_1854_t00_s38_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_00/init_state_38/sample_1854_t00_s38_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_00/init_state_38/sample_1854_t00_s38_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "articulation",
+    "eef_pos": [
+      0.45086660833756353,
+      0.005878598765339372,
+      0.26650178237615985
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "wooden_cabinet_1_cabinet_middle",
+    "target_pos": [
+      0.6819616437444807,
+      -0.24736944214544018,
+      -0.007000000000000006
+    ],
+    "dest_object_name": null,
+    "dest_pos": null,
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "akita_black_bowl_1_main": [
+        0.5581641199499839,
+        0.012397162663127603,
+        -0.013592924902407932
+      ],
+      "cream_cheese_1_main": [
+        0.6020159898743059,
+        0.14366895326572837,
+        -0.003078522581408505
+      ],
+      "wine_bottle_1_main": [
+        0.46419072458987853,
+        -0.036029829553080116,
+        -0.013124522580027942
+      ],
+      "plate_1_main": [
+        0.7201203857721271,
+        -0.03228825859145086,
+        -0.00949366147095354
+      ],
+      "wooden_cabinet_1_main": [
+        0.6819616437444807,
+        -0.24736944214544018,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_base": [
+        0.6819616437444807,
+        -0.24736944214544018,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_top": [
+        0.6819616437444807,
+        -0.24736944214544018,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_middle": [
+        0.6819616437444807,
+        -0.24736944214544018,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_bottom": [
+        0.6819616437444807,
+        -0.24736944214544018,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_main": [
+        0.24177500019147818,
+        0.2197518979938583,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_base": [
+        0.24177500019147818,
+        0.2197518979938583,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner": [
+        0.39177500019147815,
+        0.2197518979938583,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner_plate": [
+        0.39177500019147815,
+        0.2197518979938583,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_button": [
+        0.24177500019147818,
+        0.2197518979938583,
+        -0.007000000000000006
+      ],
+      "wine_rack_1_main": [
+        0.40720806472612436,
+        -0.2577482993792074,
+        0.007999999999999896
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.5269297870096007,
+      -0.5774418131603076,
+      -0.6236232452179385
+    ],
+    "distance_to_target": 0.43856893480707054,
+    "gripper_to_target_delta": [
+      0.23109503540691712,
+      -0.25324804091077957,
+      -0.27350178237615985
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}
