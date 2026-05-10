@@ -1,0 +1,147 @@
+{
+  "sample_id": 426,
+  "suite": "libero_spatial",
+  "task_id": 9,
+  "task_description": "pick up the black bowl on the wooden cabinet and place it on the plate",
+  "init_state_idx": 12,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv/libero_spatial/task_09/init_state_12/sample_0426_t09_s12_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv/libero_spatial/task_09/init_state_12/sample_0426_t09_s12_init_agent.png",
+    "wrist": "gt-q6-mv/libero_spatial/task_09/init_state_12/sample_0426_t09_s12_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.438566066537472,
+      -0.0176303709028452,
+      0.24430047453629167
+    ],
+    "base_pos_world": [
+      -0.66,
+      0.0,
+      0.912
+    ],
+    "target_object_name": "wooden_cabinet_1_cabinet_top",
+    "target_pos": [
+      0.6853572982519902,
+      -0.27640254176965107,
+      -0.007000000000000006
+    ],
+    "dest_object_name": "plate_1_main",
+    "dest_pos": [
+      0.7334224199121304,
+      0.1883091346935149,
+      -0.00949366147095354
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_controller_box": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "mount0_torso": [
+        0.0,
+        0.0,
+        0.010000000000000009
+      ],
+      "akita_black_bowl_1_main": [
+        0.7013288973469769,
+        -0.2726324952684048,
+        0.2143999841973162
+      ],
+      "akita_black_bowl_2_main": [
+        0.39342323516575367,
+        -0.1579407243600001,
+        0.016907075095384583
+      ],
+      "cookies_1_main": [
+        0.7354152958432302,
+        0.0338826437366377,
+        -0.002614522581637746
+      ],
+      "glazed_rim_porcelain_ramekin_1_main": [
+        0.4472151274070905,
+        0.1935227368284484,
+        -0.012656920713254971
+      ],
+      "plate_1_main": [
+        0.7334224199121304,
+        0.1883091346935149,
+        -0.00949366147095354
+      ],
+      "wooden_cabinet_1_main": [
+        0.6853572982519902,
+        -0.27640254176965107,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_base": [
+        0.6853572982519902,
+        -0.27640254176965107,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_top": [
+        0.6853572982519902,
+        -0.27640254176965107,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_middle": [
+        0.6853572982519902,
+        -0.27640254176965107,
+        -0.007000000000000006
+      ],
+      "wooden_cabinet_1_cabinet_bottom": [
+        0.6853572982519902,
+        -0.27640254176965107,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_main": [
+        0.25745294118597556,
+        -0.14623416339790804,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_base": [
+        0.25745294118597556,
+        -0.14623416339790804,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner": [
+        0.4074529411859755,
+        -0.14623416339790804,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_burner_plate": [
+        0.4074529411859755,
+        -0.14623416339790804,
+        -0.007000000000000006
+      ],
+      "flat_stove_1_button": [
+        0.25745294118597556,
+        -0.14623416339790804,
+        -0.007000000000000006
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      0.5646629701797098,
+      -0.5920755838300152,
+      -0.5749802023897645
+    ],
+    "distance_to_target": 0.43705935176867433,
+    "gripper_to_target_delta": [
+      0.24679123171451822,
+      -0.2587721708668059,
+      -0.2513004745362917
+    ],
+    "gripper_to_target_relation": {
+      "x": "in_front",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}

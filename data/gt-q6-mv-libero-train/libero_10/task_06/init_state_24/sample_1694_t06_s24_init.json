@@ -1,0 +1,82 @@
+{
+  "sample_id": 1694,
+  "suite": "libero_10",
+  "task_id": 6,
+  "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+  "init_state_idx": 24,
+  "frame_type": "init",
+  "image_path": "gt-q6-mv/libero_10/task_06/init_state_24/sample_1694_t06_s24_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv/libero_10/task_06/init_state_24/sample_1694_t06_s24_init_agent.png",
+    "wrist": "gt-q6-mv/libero_10/task_06/init_state_24/sample_1694_t06_s24_init_wrist.png"
+  },
+  "gt": {
+    "task_type": "pick_and_place",
+    "eef_pos": [
+      0.4545612568885927,
+      0.004992863788478825,
+      0.2672102969017917
+    ],
+    "base_pos_world": [
+      -0.51,
+      0.0,
+      0.42
+    ],
+    "target_object_name": "porcelain_mug_1_main",
+    "target_pos": [
+      0.4203281175500223,
+      -0.13258925975449798,
+      0.014369980429524476
+    ],
+    "dest_object_name": "chocolate_pudding_1_main",
+    "dest_pos": [
+      0.46980421413404266,
+      0.0914618866386348,
+      0.029839921520000035
+    ],
+    "all_objects": {
+      "mount0_base": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "porcelain_mug_1_main": [
+        0.4203281175500223,
+        -0.13258925975449798,
+        0.014369980429524476
+      ],
+      "red_coffee_mug_1_main": [
+        0.3029000359795728,
+        -0.013673945037582026,
+        0.018599097993059366
+      ],
+      "plate_1_main": [
+        0.6632605473763038,
+        0.023536218460818735,
+        0.019272908174620573
+      ],
+      "chocolate_pudding_1_main": [
+        0.46980421413404266,
+        0.0914618866386348,
+        0.029839921520000035
+      ]
+    },
+    "can_close": false,
+    "next_direction": [
+      -0.11809518665510038,
+      -0.47462157646484304,
+      -0.8722315552896055
+    ],
+    "distance_to_target": 0.2898775158258487,
+    "gripper_to_target_delta": [
+      -0.03423313933857042,
+      -0.1375821235429768,
+      -0.25284031647226723
+    ],
+    "gripper_to_target_relation": {
+      "x": "behind",
+      "y": "right",
+      "z": "below"
+    }
+  }
+}
