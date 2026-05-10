@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.egg-info/
 .env
+*.log
 
 data/gt-q6/
 data/runs/
@@ -13,3 +14,5 @@ data/runs-mv-lora-libero-new/
 data/runs-mv-base-libero/
 data/gt-q6-mv-mini/
 lerobot/
+
+models/
