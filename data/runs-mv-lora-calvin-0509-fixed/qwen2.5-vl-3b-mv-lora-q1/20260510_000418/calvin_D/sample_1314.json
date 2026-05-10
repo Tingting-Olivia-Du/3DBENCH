@@ -1,0 +1,15 @@
+{
+  "sample_id": 1314,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:44:46",
+  "task_description": "pick up the red block in the sliding cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_10/window_0305/sample_1314_t10_w0305_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_10/window_0305/sample_1314_t10_w0305_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_10/window_0305/sample_1314_t10_w0305_close_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.7, \"y\": -0.09, \"z\": 0.39}, \"q1_dest\": {\"x\": -0.09, \"y\": 0.4, \"z\": 0.3}}",
+  "elapsed_s": 1.973
+}

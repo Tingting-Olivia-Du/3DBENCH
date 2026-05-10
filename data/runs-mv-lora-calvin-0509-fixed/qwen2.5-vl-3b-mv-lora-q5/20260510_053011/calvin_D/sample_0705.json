@@ -1,0 +1,15 @@
+{
+  "sample_id": 705,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:42:05",
+  "task_description": "grasp the red block, then lift it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_03/window_0164/sample_0705_t03_w0164_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_03/window_0164/sample_0705_t03_w0164_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_03/window_0164/sample_0705_t03_w0164_init_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": 0.135, \"dz\": -0.122}}",
+  "elapsed_s": 0.987
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 1875,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:01:32",
+  "task_description": "rotate the blue block to the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_25/window_0425/sample_1875_t25_w0425_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_25/window_0425/sample_1875_t25_w0425_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_25/window_0425/sample_1875_t25_w0425_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"articulation\", \"q1\": {\"x\": 0.62, \"y\": 0.419, \"z\": 0.49}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.903
+}

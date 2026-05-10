@@ -1,0 +1,15 @@
+{
+  "sample_id": 91,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:31:56",
+  "task_description": "turn on the led light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_00/window_0019/sample_0091_t00_w0019_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_00/window_0019/sample_0091_t00_w0019_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_00/window_0019/sample_0091_t00_w0019_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.195, \"dy\": -0.135, \"dz\": -0.123}}",
+  "elapsed_s": 0.968
+}

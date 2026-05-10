@@ -1,0 +1,15 @@
+{
+  "sample_id": 3307,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:45:17",
+  "task_description": "pick up the pink block",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_20/window_0771/sample_3307_t20_w0771_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_20/window_0771/sample_3307_t20_w0771_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_20/window_0771/sample_3307_t20_w0771_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.596, \"y\": -0.213, \"z\": 0.404}, \"q1_dest\": {\"x\": -0.17, \"y\": 0.591, \"z\": 0.42}}",
+  "elapsed_s": 2.18
+}

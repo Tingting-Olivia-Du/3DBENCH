@@ -1,0 +1,15 @@
+{
+  "sample_id": 3429,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:30:21",
+  "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+  "image_path": "gt-q6-mv-test/libero_10/task_07/init_state_10/sample_3429_t07_s10_traj_003of025_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_07/init_state_10/sample_3429_t07_s10_traj_003of025_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_07/init_state_10/sample_3429_t07_s10_traj_003of025_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.517
+}

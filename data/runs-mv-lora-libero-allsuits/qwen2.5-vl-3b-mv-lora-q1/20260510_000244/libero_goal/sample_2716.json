@@ -1,0 +1,15 @@
+{
+  "sample_id": 2716,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:04:12",
+  "task_description": "put the wine bottle on the rack",
+  "image_path": "gt-q6-mv-test/libero_goal/task_09/init_state_21/sample_2716_t09_s21_traj_076of108_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_09/init_state_21/sample_2716_t09_s21_traj_076of108_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_09/init_state_21/sample_2716_t09_s21_traj_076of108_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.697, \"y\": -0.238, \"z\": -0.007}, \"q1_dest\": {\"x\": 0.736, \"y\": 0.209, \"z\": -0.001}}",
+  "elapsed_s": 2.26
+}

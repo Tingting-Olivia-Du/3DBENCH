@@ -1,0 +1,15 @@
+{
+  "sample_id": 1361,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:52:54",
+  "task_description": "grasp the blue block in the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_22/window_0317/sample_1361_t22_w0317_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_22/window_0317/sample_1361_t22_w0317_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_22/window_0317/sample_1361_t22_w0317_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.005, \"dz\": -0.057}}",
+  "elapsed_s": 0.995
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 3331,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T03:18:17",
+  "task_description": "grasp the handle of the drawer and open it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_17/window_0777/sample_3331_t17_w0777_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_17/window_0777/sample_3331_t17_w0777_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_17/window_0777/sample_3331_t17_w0777_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.191, \"y\": -0.459, \"z\": 0.048}}",
+  "elapsed_s": 1.131
+}

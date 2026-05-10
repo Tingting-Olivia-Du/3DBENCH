@@ -1,0 +1,15 @@
+{
+  "sample_id": 681,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:41:41",
+  "task_description": "lift the pink block from the table",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_20/window_0158/sample_0681_t20_w0158_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_20/window_0158/sample_0681_t20_w0158_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_20/window_0158/sample_0681_t20_w0158_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": 0.192, \"dz\": -0.123}}",
+  "elapsed_s": 0.988
+}

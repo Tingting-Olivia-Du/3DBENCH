@@ -1,0 +1,15 @@
+{
+  "sample_id": 2539,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b",
+  "run_timestamp": "20260509_104547",
+  "sample_timestamp": "2026-05-09T14:01:34",
+  "task_description": "go towards the blue block in the drawer and pick it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_22/window_0589/sample_2539_t22_w0589_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_22/window_0589/sample_2539_t22_w0589_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_22/window_0589/sample_2539_t22_w0589_close_wrist.png"
+  },
+  "raw_response": "{\n  \"task_type\": \"pick_and_place\",\n  \"q1\": {\"x\": -0.34, \"y\": -0.36, \"z\": 0.36},\n  \"q1_dest\": {\"x\": -0.34, \"y\": -0.36, \"z\": 0.36},\n  \"q2\": {\"x\": -0.04, \"y\": -0.11, \"z\": 0.51},\n  \"q3\": {\"can_close\": \"no\"},\n  \"q4\": {\"dx\": 0.04, \"dy\": 0.04, \"dz\": 0.04},\n  \"q5\": {\"dx\": 0.04, \"dy\": 0.04, \"dz\": 0.04},\n  \"q6\": {\"x\": \"behind\", \"y\": \"left\", \"z\": \"above\"}\n}",
+  "elapsed_s": 4.62
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 1708,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:58:37",
+  "task_description": "open the cabinet drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_17/window_0386/sample_1708_t17_w0386_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_17/window_0386/sample_1708_t17_w0386_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_17/window_0386/sample_1708_t17_w0386_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": -0.005, \"dz\": -0.038}}",
+  "elapsed_s": 1.02
+}

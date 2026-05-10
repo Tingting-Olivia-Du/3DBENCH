@@ -1,0 +1,15 @@
+{
+  "sample_id": 2918,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_064152",
+  "sample_timestamp": "2026-05-10T07:16:35",
+  "task_description": "move the light switch to turn on the yellow light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_06/window_0683/sample_2918_t06_w0683_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_06/window_0683/sample_2918_t06_w0683_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_06/window_0683/sample_2918_t06_w0683_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"aligned_y\", \"z\": \"below\"}}",
+  "elapsed_s": 0.699
+}

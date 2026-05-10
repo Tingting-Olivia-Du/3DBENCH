@@ -1,0 +1,15 @@
+{
+  "sample_id": 3538,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:31:22",
+  "task_description": "put both moka pots on the stove",
+  "image_path": "gt-q6-mv-test/libero_10/task_08/init_state_21/sample_3538_t08_s21_traj_009of064_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_08/init_state_21/sample_3538_t08_s21_traj_009of064_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_08/init_state_21/sample_3538_t08_s21_traj_009of064_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.569
+}

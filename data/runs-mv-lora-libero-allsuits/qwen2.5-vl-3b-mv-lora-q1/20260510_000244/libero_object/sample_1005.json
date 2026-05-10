@@ -1,0 +1,15 @@
+{
+  "sample_id": 1005,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:08:51",
+  "task_description": "pick up the alphabet soup and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_00/init_state_48/sample_1005_t00_s48_traj_032of046_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_00/init_state_48/sample_1005_t00_s48_traj_032of046_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_00/init_state_48/sample_1005_t00_s48_traj_032of046_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.48, \"y\": -0.24, \"z\": 0.072}, \"q1_dest\": {\"x\": 0.609, \"y\": 0.263, \"z\": -0.005}}",
+  "elapsed_s": 2.219
+}

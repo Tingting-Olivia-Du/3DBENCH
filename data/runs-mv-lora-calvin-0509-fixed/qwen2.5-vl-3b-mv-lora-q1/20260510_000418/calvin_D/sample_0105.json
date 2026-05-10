@@ -1,0 +1,15 @@
+{
+  "sample_id": 105,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:07:54",
+  "task_description": "grasp the pink block lying in the cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0105_t15_w0023_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0105_t15_w0023_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_15/window_0023/sample_0105_t15_w0023_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": -0.09, \"y\": 0.39, \"z\": 0.45}, \"q1_dest\": {\"x\": -0.16, \"y\": 0.416, \"z\": 0.4}}",
+  "elapsed_s": 2.059
+}

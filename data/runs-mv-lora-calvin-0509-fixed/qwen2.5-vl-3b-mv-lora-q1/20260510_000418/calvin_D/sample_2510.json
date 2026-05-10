@@ -1,0 +1,15 @@
+{
+  "sample_id": 2510,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:21:07",
+  "task_description": "grasp the red block lying in the cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_10/window_0584/sample_2510_t10_w0584_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_10/window_0584/sample_2510_t10_w0584_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_10/window_0584/sample_2510_t10_w0584_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.49, \"y\": -0.073, \"z\": 0.365}, \"q1_dest\": {\"x\": -0.286, \"y\": 0.506, \"z\": 0.4}}}",
+  "elapsed_s": 2.141
+}

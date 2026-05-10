@@ -1,0 +1,15 @@
+{
+  "sample_id": 2288,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T00:49:59",
+  "task_description": "put the bowl on top of the cabinet",
+  "image_path": "gt-q6-mv-test/libero_goal/task_04/init_state_43/sample_2288_t04_s43_traj_128of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_04/init_state_43/sample_2288_t04_s43_traj_128of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_04/init_state_43/sample_2288_t04_s43_traj_128of300_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.697, \"y\": -0.243, \"z\": -0.007}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.826
+}

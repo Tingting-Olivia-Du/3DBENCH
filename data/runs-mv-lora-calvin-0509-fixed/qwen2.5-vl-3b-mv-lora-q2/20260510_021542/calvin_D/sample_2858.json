@@ -1,0 +1,15 @@
+{
+  "sample_id": 2858,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T03:09:28",
+  "task_description": "go towards the blue block in the drawer and grasp it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_22/window_0667/sample_2858_t22_w0667_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_22/window_0667/sample_2858_t22_w0667_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_22/window_0667/sample_2858_t22_w0667_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.291, \"y\": -0.458, \"z\": 0.505}}",
+  "elapsed_s": 1.207
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2899,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:25:20",
+  "task_description": "put both the cream cheese box and the butter in the basket",
+  "image_path": "gt-q6-mv-test/libero_10/task_01/init_state_21/sample_2899_t01_s21_traj_054of129_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_01/init_state_21/sample_2899_t01_s21_traj_054of129_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_01/init_state_21/sample_2899_t01_s21_traj_054of129_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.572
+}

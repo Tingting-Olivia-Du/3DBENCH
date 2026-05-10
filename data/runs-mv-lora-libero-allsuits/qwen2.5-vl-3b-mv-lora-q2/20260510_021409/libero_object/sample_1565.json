@@ -1,0 +1,15 @@
+{
+  "sample_id": 1565,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021409",
+  "sample_timestamp": "2026-05-10T03:01:10",
+  "task_description": "pick up the butter and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_06/init_state_01/sample_1565_t06_s01_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_06/init_state_01/sample_1565_t06_s01_close_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_06/init_state_01/sample_1565_t06_s01_close_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.479, \"y\": -0.081, \"z\": 0.147}}",
+  "elapsed_s": 1.149
+}

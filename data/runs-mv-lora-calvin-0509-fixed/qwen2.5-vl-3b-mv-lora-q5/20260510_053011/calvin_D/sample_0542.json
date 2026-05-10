@@ -1,0 +1,15 @@
+{
+  "sample_id": 542,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:39:24",
+  "task_description": "grasp the blue block lying on the shelf",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0125/sample_0542_t08_w0125_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0125/sample_0542_t08_w0125_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0125/sample_0542_t08_w0125_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.159, \"dy\": -0.035, \"dz\": -0.157}}",
+  "elapsed_s": 1.006
+}

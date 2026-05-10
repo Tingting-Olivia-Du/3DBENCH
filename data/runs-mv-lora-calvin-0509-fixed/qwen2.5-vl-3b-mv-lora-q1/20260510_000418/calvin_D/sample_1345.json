@@ -1,0 +1,15 @@
+{
+  "sample_id": 1345,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:45:44",
+  "task_description": "grasp the blue block lying in the cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0314/sample_1345_t08_w0314_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0314/sample_1345_t08_w0314_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0314/sample_1345_t08_w0314_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.419, \"y\": -0.109, \"z\": 0.365}, \"q1_dest\": {\"x\": -0.21, \"y\": 0.409, \"z\": 0.4}}",
+  "elapsed_s": 2.237
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 463,
+  "suite": "libero_spatial",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:53:54",
+  "task_description": "pick up the black bowl on the ramekin and place it on the plate",
+  "image_path": "gt-q6-mv-test/libero_spatial/task_05/init_state_05/sample_0463_t05_s05_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_spatial/task_05/init_state_05/sample_0463_t05_s05_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_spatial/task_05/init_state_05/sample_0463_t05_s05_init_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.499
+}

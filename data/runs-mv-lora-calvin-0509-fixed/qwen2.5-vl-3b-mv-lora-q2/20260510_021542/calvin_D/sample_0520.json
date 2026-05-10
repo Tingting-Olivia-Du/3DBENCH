@@ -1,0 +1,15 @@
+{
+  "sample_id": 520,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:25:45",
+  "task_description": "grasp the pink block and turn it left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_21/window_0121/sample_0520_t21_w0121_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_21/window_0121/sample_0520_t21_w0121_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_21/window_0121/sample_0520_t21_w0121_init_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.291, \"y\": -0.105, \"z\": 0.507}}",
+  "elapsed_s": 1.136
+}

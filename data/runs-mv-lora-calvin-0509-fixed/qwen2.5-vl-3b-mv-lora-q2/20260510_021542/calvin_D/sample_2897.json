@@ -1,0 +1,15 @@
+{
+  "sample_id": 2897,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T03:10:12",
+  "task_description": "lift the red block lying in the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_12/window_0678/sample_2897_t12_w0678_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_12/window_0678/sample_2897_t12_w0678_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_12/window_0678/sample_2897_t12_w0678_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.249, \"y\": -0.438, \"z\": 0.507}}",
+  "elapsed_s": 1.11
+}

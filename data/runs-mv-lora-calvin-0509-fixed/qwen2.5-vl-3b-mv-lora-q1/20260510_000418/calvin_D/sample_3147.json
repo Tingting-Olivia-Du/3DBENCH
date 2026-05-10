@@ -1,0 +1,15 @@
+{
+  "sample_id": 3147,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:40:27",
+  "task_description": "pick up the blue block from the shelf",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0739/sample_3147_t08_w0739_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0739/sample_3147_t08_w0739_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0739/sample_3147_t08_w0739_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.59, \"y\": -0.083, \"z\": 0.405}, \"q1_dest\": {\"x\": -0.184, \"y\": 0.411, \"z\": 0.42}}",
+  "elapsed_s": 2.157
+}

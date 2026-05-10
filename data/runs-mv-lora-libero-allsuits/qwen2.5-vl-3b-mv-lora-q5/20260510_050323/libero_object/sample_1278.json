@@ -1,0 +1,15 @@
+{
+  "sample_id": 1278,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_050323",
+  "sample_timestamp": "2026-05-10T05:42:53",
+  "task_description": "pick up the bbq sauce and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_03/init_state_43/sample_1278_t03_s43_traj_027of028_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_03/init_state_43/sample_1278_t03_s43_traj_027of028_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_03/init_state_43/sample_1278_t03_s43_traj_027of028_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.027, \"dy\": -0.029, \"dz\": -0.022}}",
+  "elapsed_s": 1.028
+}

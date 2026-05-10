@@ -1,0 +1,15 @@
+{
+  "sample_id": 2993,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:26:14",
+  "task_description": "turn on the stove and put the moka pot on it",
+  "image_path": "gt-q6-mv-test/libero_10/task_02/init_state_21/sample_2993_t02_s21_traj_213of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_02/init_state_21/sample_2993_t02_s21_traj_213of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_02/init_state_21/sample_2993_t02_s21_traj_213of300_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.571
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2189,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_050323",
+  "sample_timestamp": "2026-05-10T05:26:58",
+  "task_description": "open the top drawer and put the bowl inside",
+  "image_path": "gt-q6-mv-test/libero_goal/task_03/init_state_38/sample_2189_t03_s38_traj_156of274_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_03/init_state_38/sample_2189_t03_s38_traj_156of274_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_03/init_state_38/sample_2189_t03_s38_traj_156of274_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.027, \"dy\": -0.001, \"dz\": -0.039}}",
+  "elapsed_s": 1.046
+}

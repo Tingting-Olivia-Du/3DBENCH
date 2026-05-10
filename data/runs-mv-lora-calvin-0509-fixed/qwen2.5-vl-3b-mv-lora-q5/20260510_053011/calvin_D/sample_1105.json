@@ -1,0 +1,15 @@
+{
+  "sample_id": 1105,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:48:40",
+  "task_description": "lift the blue block lying in the cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0255/sample_1105_t08_w0255_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0255/sample_1105_t08_w0255_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0255/sample_1105_t08_w0255_init_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.022, \"dy\": 0.019, \"dz\": -0.024}}",
+  "elapsed_s": 0.974
+}

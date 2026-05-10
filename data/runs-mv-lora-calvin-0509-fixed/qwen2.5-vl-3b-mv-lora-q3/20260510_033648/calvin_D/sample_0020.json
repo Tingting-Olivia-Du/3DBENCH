@@ -1,0 +1,15 @@
+{
+  "sample_id": 20,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T03:37:14",
+  "task_description": "take the pink block and turn it right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_04/window_0004/sample_0020_t04_w0004_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_04/window_0004/sample_0020_t04_w0004_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_04/window_0004/sample_0020_t04_w0004_init_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.536
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 41,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:16:43",
+  "task_description": "in the slider pick up the blue block",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0008/sample_0041_t08_w0008_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0008/sample_0041_t08_w0008_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0008/sample_0041_t08_w0008_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.291, \"y\": -0.004, \"z\": 0.547}}",
+  "elapsed_s": 1.154
+}

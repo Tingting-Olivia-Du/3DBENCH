@@ -1,0 +1,15 @@
+{
+  "sample_id": 3139,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:22:14",
+  "task_description": "rotate the pink block towards the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_04/window_0737/sample_3139_t04_w0737_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_04/window_0737/sample_3139_t04_w0737_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_04/window_0737/sample_3139_t04_w0737_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.012, \"dz\": -0.022}}",
+  "elapsed_s": 1.029
+}

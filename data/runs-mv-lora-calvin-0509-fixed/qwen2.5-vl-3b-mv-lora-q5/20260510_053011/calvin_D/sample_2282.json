@@ -1,0 +1,15 @@
+{
+  "sample_id": 2282,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:08:04",
+  "task_description": "move the door all the way to the right and let go",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_16/window_0524/sample_2282_t16_w0524_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_16/window_0524/sample_2282_t16_w0524_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_16/window_0524/sample_2282_t16_w0524_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": -0.002, \"dz\": -0.155}}",
+  "elapsed_s": 0.973
+}

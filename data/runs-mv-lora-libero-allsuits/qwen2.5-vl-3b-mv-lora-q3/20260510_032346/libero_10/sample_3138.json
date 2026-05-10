@@ -1,0 +1,15 @@
+{
+  "sample_id": 3138,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:27:36",
+  "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+  "image_path": "gt-q6-mv-test/libero_10/task_04/init_state_48/sample_3138_t04_s48_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_04/init_state_48/sample_3138_t04_s48_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_04/init_state_48/sample_3138_t04_s48_init_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.569
+}

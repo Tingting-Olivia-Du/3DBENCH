@@ -1,0 +1,15 @@
+{
+  "sample_id": 2085,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:55:00",
+  "task_description": "pick up the pink block from the shelf",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_15/window_0476/sample_2085_t15_w0476_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_15/window_0476/sample_2085_t15_w0476_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_15/window_0476/sample_2085_t15_w0476_init_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.249, \"y\": -0.105, \"z\": 0.507}}",
+  "elapsed_s": 1.271
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 908,
+  "suite": "libero_spatial",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T02:13:45",
+  "task_description": "pick up the black bowl on the wooden cabinet and place it on the plate",
+  "image_path": "gt-q6-mv-test/libero_spatial/task_09/init_state_43/sample_0908_t09_s43_traj_256of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_spatial/task_09/init_state_43/sample_0908_t09_s43_traj_256of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_spatial/task_09/init_state_43/sample_0908_t09_s43_traj_256of300_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.417, \"y\": -0.149, \"z\": 0.017}, \"q1_dest\": {\"x\": 0.73, \"y\": 0.197, \"z\": -0.009}}",
+  "elapsed_s": 2.308
+}

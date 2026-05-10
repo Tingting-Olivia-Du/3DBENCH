@@ -1,0 +1,15 @@
+{
+  "sample_id": 1204,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:50:18",
+  "task_description": "turn off the green light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_11/window_0278/sample_1204_t11_w0278_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_11/window_0278/sample_1204_t11_w0278_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_11/window_0278/sample_1204_t11_w0278_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.149, \"dy\": -0.162, \"dz\": -0.163}}",
+  "elapsed_s": 0.957
+}

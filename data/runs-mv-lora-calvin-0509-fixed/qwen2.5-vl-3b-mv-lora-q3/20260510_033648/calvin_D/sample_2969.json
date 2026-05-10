@@ -1,0 +1,15 @@
+{
+  "sample_id": 2969,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T04:03:35",
+  "task_description": "push the door to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_02/window_0695/sample_2969_t02_w0695_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_02/window_0695/sample_2969_t02_w0695_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_02/window_0695/sample_2969_t02_w0695_close_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.491
+}

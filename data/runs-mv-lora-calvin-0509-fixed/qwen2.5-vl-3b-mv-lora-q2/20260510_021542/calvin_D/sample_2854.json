@@ -1,0 +1,15 @@
+{
+  "sample_id": 2854,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T03:09:23",
+  "task_description": "move the door all the way to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_02/window_0664/sample_2854_t02_w0664_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_02/window_0664/sample_2854_t02_w0664_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_02/window_0664/sample_2854_t02_w0664_close_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.091, \"y\": -0.459, \"z\": 0.047}}",
+  "elapsed_s": 1.104
+}

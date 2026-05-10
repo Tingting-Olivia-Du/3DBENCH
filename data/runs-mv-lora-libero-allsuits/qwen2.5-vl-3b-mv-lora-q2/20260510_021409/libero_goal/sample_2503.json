@@ -1,0 +1,15 @@
+{
+  "sample_id": 2503,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021409",
+  "sample_timestamp": "2026-05-10T02:44:09",
+  "task_description": "turn on the stove",
+  "image_path": "gt-q6-mv-test/libero_goal/task_07/init_state_01/sample_2503_t07_s01_traj_299of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_07/init_state_01/sample_2503_t07_s01_traj_299of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_07/init_state_01/sample_2503_t07_s01_traj_299of300_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.257, \"y\": -0.003, \"z\": 0.197}}",
+  "elapsed_s": 1.166
+}

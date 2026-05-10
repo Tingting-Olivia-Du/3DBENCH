@@ -1,0 +1,15 @@
+{
+  "sample_id": 819,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:43:58",
+  "task_description": "go push the red block to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_13/window_0189/sample_0819_t13_w0189_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_13/window_0189/sample_0819_t13_w0189_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_13/window_0189/sample_0819_t13_w0189_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.152, \"dz\": -0.097}}",
+  "elapsed_s": 0.983
+}

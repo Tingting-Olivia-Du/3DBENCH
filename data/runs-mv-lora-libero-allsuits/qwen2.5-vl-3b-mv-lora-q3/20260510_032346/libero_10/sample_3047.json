@@ -1,0 +1,15 @@
+{
+  "sample_id": 3047,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:26:45",
+  "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+  "image_path": "gt-q6-mv-test/libero_10/task_03/init_state_01/sample_3047_t03_s01_traj_005of039_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_03/init_state_01/sample_3047_t03_s01_traj_005of039_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_03/init_state_01/sample_3047_t03_s01_traj_005of039_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.548
+}

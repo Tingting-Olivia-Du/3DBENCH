@@ -1,0 +1,15 @@
+{
+  "sample_id": 3643,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_050323",
+  "sample_timestamp": "2026-05-10T05:20:27",
+  "task_description": "put the yellow and white mug in the microwave and close it",
+  "image_path": "gt-q6-mv-test/libero_10/task_09/init_state_27/sample_3643_t09_s27_traj_029of035_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_09/init_state_27/sample_3643_t09_s27_traj_029of035_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_09/init_state_27/sample_3643_t09_s27_traj_029of035_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": -0.079, \"dy\": 0.001, \"dz\": -0.062}}",
+  "elapsed_s": 1.124
+}

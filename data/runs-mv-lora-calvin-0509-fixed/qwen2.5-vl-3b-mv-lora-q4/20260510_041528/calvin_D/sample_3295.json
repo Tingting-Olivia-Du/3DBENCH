@@ -1,0 +1,15 @@
+{
+  "sample_id": 3295,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q4",
+  "run_timestamp": "20260510_041528",
+  "sample_timestamp": "2026-05-10T05:13:53",
+  "task_description": "grasp the pink block and lift it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_20/window_0769/sample_3295_t20_w0769_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_20/window_0769/sample_3295_t20_w0769_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_20/window_0769/sample_3295_t20_w0769_init_wrist.png"
+  },
+  "raw_response": "{\"q4\": {\"dx\": 0.39, \"dy\": -0.58, \"dz\": -0.73}}",
+  "elapsed_s": 1.097
+}

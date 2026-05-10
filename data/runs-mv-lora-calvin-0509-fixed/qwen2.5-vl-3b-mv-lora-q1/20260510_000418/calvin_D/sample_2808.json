@@ -1,0 +1,15 @@
+{
+  "sample_id": 2808,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:30:02",
+  "task_description": "lift the blue block up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_07/window_0648/sample_2808_t07_w0648_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_07/window_0648/sample_2808_t07_w0648_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_07/window_0648/sample_2808_t07_w0648_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.519, \"y\": -0.32, \"z\": 0.395}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.816
+}

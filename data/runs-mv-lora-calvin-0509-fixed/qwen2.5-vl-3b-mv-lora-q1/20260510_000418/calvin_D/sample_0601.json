@@ -1,0 +1,15 @@
+{
+  "sample_id": 601,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:23:03",
+  "task_description": "close the cabinet drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_09/window_0142/sample_0601_t09_w0142_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_09/window_0142/sample_0601_t09_w0142_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_09/window_0142/sample_0601_t09_w0142_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"articulation\", \"q1\": {\"x\": 0.2, \"y\": -0.098, \"z\": 0.399}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.859
+}

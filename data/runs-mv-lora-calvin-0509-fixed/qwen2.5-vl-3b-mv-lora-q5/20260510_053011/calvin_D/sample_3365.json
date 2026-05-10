@@ -1,0 +1,15 @@
+{
+  "sample_id": 3365,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:26:01",
+  "task_description": "push the button to turn on the green light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_00/window_0787/sample_3365_t00_w0787_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_00/window_0787/sample_3365_t00_w0787_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_00/window_0787/sample_3365_t00_w0787_init_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.001, \"dz\": -0.029}}",
+  "elapsed_s": 0.973
+}

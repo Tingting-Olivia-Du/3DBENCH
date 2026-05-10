@@ -1,0 +1,15 @@
+{
+  "sample_id": 609,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T03:42:38",
+  "task_description": "push the button to turn on the led",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_00/window_0143/sample_0609_t00_w0143_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_00/window_0143/sample_0609_t00_w0143_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_00/window_0143/sample_0609_t00_w0143_close_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.552
+}

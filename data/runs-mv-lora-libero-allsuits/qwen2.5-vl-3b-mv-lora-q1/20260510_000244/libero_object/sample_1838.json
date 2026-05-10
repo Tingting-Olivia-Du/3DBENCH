@@ -1,0 +1,15 @@
+{
+  "sample_id": 1838,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:39:35",
+  "task_description": "pick up the orange juice and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1838_t09_s48_traj_007of028_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1838_t09_s48_traj_007of028_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_09/init_state_48/sample_1838_t09_s48_traj_007of028_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.48, \"y\": -0.149, \"z\": 0.075}, \"q1_dest\": {\"x\": 0.601, \"y\": 0.269, \"z\": -0.005}}",
+  "elapsed_s": 2.325
+}

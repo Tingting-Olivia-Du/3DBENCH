@@ -1,0 +1,15 @@
+{
+  "sample_id": 1737,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:48:40",
+  "task_description": "pick up the chocolate pudding and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_08/init_state_43/sample_1737_t08_s43_traj_009of035_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_08/init_state_43/sample_1737_t08_s43_traj_009of035_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_08/init_state_43/sample_1737_t08_s43_traj_009of035_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.548
+}

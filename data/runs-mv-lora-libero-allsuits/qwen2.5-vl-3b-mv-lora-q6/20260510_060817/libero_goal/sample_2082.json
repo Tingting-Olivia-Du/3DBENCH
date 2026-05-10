@@ -1,0 +1,15 @@
+{
+  "sample_id": 2082,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_060817",
+  "sample_timestamp": "2026-05-10T06:23:38",
+  "task_description": "put the wine bottle on top of the cabinet",
+  "image_path": "gt-q6-mv-test/libero_goal/task_02/init_state_27/sample_2082_t02_s27_traj_128of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_02/init_state_27/sample_2082_t02_s27_traj_128of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_02/init_state_27/sample_2082_t02_s27_traj_128of300_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"right\", \"z\": \"below\"}}",
+  "elapsed_s": 0.743
+}

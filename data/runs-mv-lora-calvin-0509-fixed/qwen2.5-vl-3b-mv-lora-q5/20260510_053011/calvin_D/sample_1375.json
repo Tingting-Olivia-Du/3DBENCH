@@ -1,0 +1,15 @@
+{
+  "sample_id": 1375,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:53:08",
+  "task_description": "turn the blue block right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_25/window_0320/sample_1375_t25_w0320_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_25/window_0320/sample_1375_t25_w0320_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_25/window_0320/sample_1375_t25_w0320_init_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.022, \"dy\": -0.092, \"dz\": -0.057}}",
+  "elapsed_s": 0.972
+}

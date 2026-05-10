@@ -1,0 +1,15 @@
+{
+  "sample_id": 1961,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:04:17",
+  "task_description": "pick up the red block from the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_12/window_0449/sample_1961_t12_w0449_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_12/window_0449/sample_1961_t12_w0449_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_12/window_0449/sample_1961_t12_w0449_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.197, \"y\": -0.088, \"z\": 0.36}, \"q1_dest\": {\"x\": -0.17, \"y\": 0.593, \"z\": 0.0}}",
+  "elapsed_s": 2.109
+}

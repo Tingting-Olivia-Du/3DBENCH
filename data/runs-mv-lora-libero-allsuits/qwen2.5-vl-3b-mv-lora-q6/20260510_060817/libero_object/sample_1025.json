@@ -1,0 +1,15 @@
+{
+  "sample_id": 1025,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_060817",
+  "sample_timestamp": "2026-05-10T06:33:54",
+  "task_description": "pick up the cream cheese and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_01/init_state_01/sample_1025_t01_s01_traj_017of031_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_01/init_state_01/sample_1025_t01_s01_traj_017of031_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_01/init_state_01/sample_1025_t01_s01_traj_017of031_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"right\", \"z\": \"below\"}}",
+  "elapsed_s": 0.773
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2812,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T04:02:11",
+  "task_description": "toggle the button to turn off the green light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_11/window_0649/sample_2812_t11_w0649_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_11/window_0649/sample_2812_t11_w0649_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_11/window_0649/sample_2812_t11_w0649_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.619
+}

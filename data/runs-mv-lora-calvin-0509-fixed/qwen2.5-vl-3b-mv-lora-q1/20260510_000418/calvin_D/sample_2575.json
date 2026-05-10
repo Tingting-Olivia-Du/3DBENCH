@@ -1,0 +1,15 @@
+{
+  "sample_id": 2575,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:23:12",
+  "task_description": "go slide the pink block to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_23/window_0601/sample_2575_t23_w0601_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_23/window_0601/sample_2575_t23_w0601_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_23/window_0601/sample_2575_t23_w0601_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.0, \"y\": 0.9, \"z\": 0.46}, \"q1_dest\": {\"x\": -0.28, \"y\": 0.783, \"z\": 0.46}}",
+  "elapsed_s": 2.114
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2437,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:10:39",
+  "task_description": "take the red block and turn it left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_14/window_0564/sample_2437_t14_w0564_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_14/window_0564/sample_2437_t14_w0564_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_14/window_0564/sample_2437_t14_w0564_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.149, \"dy\": -0.035, \"dz\": -0.102}}",
+  "elapsed_s": 0.975
+}

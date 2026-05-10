@@ -1,0 +1,15 @@
+{
+  "sample_id": 3764,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:32:38",
+  "task_description": "go slide the blue block to the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_28/window_0878/sample_3764_t28_w0878_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_28/window_0878/sample_3764_t28_w0878_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_28/window_0878/sample_3764_t28_w0878_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.002, \"dz\": -0.024}}",
+  "elapsed_s": 1.09
+}

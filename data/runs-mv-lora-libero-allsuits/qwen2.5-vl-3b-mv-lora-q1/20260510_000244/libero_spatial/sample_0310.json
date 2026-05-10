@@ -1,0 +1,15 @@
+{
+  "sample_id": 310,
+  "suite": "libero_spatial",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:51:28",
+  "task_description": "pick up the black bowl on the cookie box and place it on the plate",
+  "image_path": "gt-q6-mv-test/libero_spatial/task_03/init_state_10/sample_0310_t03_s10_traj_035of051_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_spatial/task_03/init_state_10/sample_0310_t03_s10_traj_035of051_agent.png",
+    "wrist": "gt-q6-mv-test/libero_spatial/task_03/init_state_10/sample_0310_t03_s10_traj_035of051_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.709, \"y\": 0.02, \"z\": 0.006}, \"q1_dest\": {\"x\": 0.735, \"y\": 0.204, \"z\": -0.009}}",
+  "elapsed_s": 2.219
+}

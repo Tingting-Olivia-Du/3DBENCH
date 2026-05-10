@@ -1,0 +1,15 @@
+{
+  "sample_id": 1697,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:56:12",
+  "task_description": "move the sliding door to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_02/window_0384/sample_1697_t02_w0384_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_02/window_0384/sample_1697_t02_w0384_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_02/window_0384/sample_1697_t02_w0384_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"articulation\", \"q1\": {\"x\": 0.195, \"y\": -0.094, \"z\": 0.497}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.739
+}

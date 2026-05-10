@@ -1,0 +1,15 @@
+{
+  "sample_id": 4087,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T02:08:47",
+  "task_description": "lift the red block lying in the sliding cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_10/window_0962/sample_4087_t10_w0962_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_10/window_0962/sample_4087_t10_w0962_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_10/window_0962/sample_4087_t10_w0962_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.209, \"y\": -0.075, \"z\": 0.469}, \"q1_dest\": {\"x\": -0.15, \"y\": 0.399, \"z\": 0.46}}",
+  "elapsed_s": 2.216
+}

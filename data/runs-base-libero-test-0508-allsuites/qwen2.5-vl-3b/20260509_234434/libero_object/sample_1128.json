@@ -1,0 +1,15 @@
+{
+  "sample_id": 1128,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b",
+  "run_timestamp": "20260509_234434",
+  "sample_timestamp": "2026-05-10T02:47:00",
+  "task_description": "pick up the salad dressing and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_02/init_state_05/sample_1128_t02_s05_traj_022of027_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_02/init_state_05/sample_1128_t02_s05_traj_022of027_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_02/init_state_05/sample_1128_t02_s05_traj_022of027_wrist.png"
+  },
+  "raw_response": "{\n  \"task_type\": \"pick_and_place\",\n  \"q1\": {\"x\": 0.55, \"y\": 0.20, \"z\": -0.01},\n  \"q1_dest\": {\"x\": 0.71, \"y\": 0.21, \"z\": -0.01},\n  \"q2\": {\"x\": 0.45, \"y\": -0.01, \"z\": 0.26},\n  \"q3\": {\"can_close\": \"no\"},\n  \"q4\": {\"dx\": 0.39, \"dy\": 0.56, \"dz\": -0.73},\n  \"q5\": {\"dx\": 0.10, \"dy\": 0.21, \"dz\": -0.27},\n  \"q6\": {\"x\": \"in_front\", \"y\": \"left\", \"z\": \"below\"}\n}",
+  "elapsed_s": 5.497
+}

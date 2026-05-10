@@ -1,0 +1,15 @@
+{
+  "sample_id": 2230,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:07:13",
+  "task_description": "turn off the led",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_11/window_0507/sample_2230_t11_w0507_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_11/window_0507/sample_2230_t11_w0507_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_11/window_0507/sample_2230_t11_w0507_init_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": -0.135, \"dz\": -0.137}}",
+  "elapsed_s": 0.962
+}

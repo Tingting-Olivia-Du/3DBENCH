@@ -1,0 +1,15 @@
+{
+  "sample_id": 2540,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b",
+  "run_timestamp": "20260509_234434",
+  "sample_timestamp": "2026-05-10T02:07:37",
+  "task_description": "turn on the stove",
+  "image_path": "gt-q6-mv-test/libero_goal/task_07/init_state_27/sample_2540_t07_s27_traj_170of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_07/init_state_27/sample_2540_t07_s27_traj_170of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_07/init_state_27/sample_2540_t07_s27_traj_170of300_wrist.png"
+  },
+  "raw_response": "{\n  \"task_type\": \"articulation\",\n  \"q1\": {\"x\": 0.55, \"y\": 0.20, \"z\": -0.01},\n  \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null},\n  \"q2\": {\"x\": 0.45, \"y\": -0.01, \"z\": 0.26},\n  \"q3\": {\"can_close\": \"no\"},\n  \"q4\": {\"dx\": 0.39, \"dy\": 0.56, \"dz\": -0.73},\n  \"q5\": {\"dx\": 0.10, \"dy\": 0.21, \"dz\": -0.27},\n  \"q6\": {\"x\": \"in_front\", \"y\": \"left\", \"z\": \"below\"}\n}",
+  "elapsed_s": 5.182
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 1769,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:49:06",
+  "task_description": "grasp the pink block on the table, then lift it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_20/window_0399/sample_1769_t20_w0399_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_20/window_0399/sample_1769_t20_w0399_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_20/window_0399/sample_1769_t20_w0399_close_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.096, \"y\": -0.108, \"z\": 0.511}}",
+  "elapsed_s": 1.106
+}

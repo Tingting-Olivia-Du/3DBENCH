@@ -1,0 +1,15 @@
+{
+  "sample_id": 3974,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b",
+  "run_timestamp": "20260509_104547",
+  "sample_timestamp": "2026-05-09T15:41:51",
+  "task_description": "push the blue block to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_19/window_0931/sample_3974_t19_w0931_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_19/window_0931/sample_3974_t19_w0931_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_19/window_0931/sample_3974_t19_w0931_close_wrist.png"
+  },
+  "raw_response": "{\n  \"task_type\": \"articulation\",\n  \"q1\": {\"x\": -0.34, \"y\": 0.0, \"z\": 0.36},\n  \"q1_dest\": null,\n  \"q2\": {\"x\": -0.04, \"y\": -0.11, \"z\": 0.51},\n  \"q3\": {\"can_close\": \"no\"},\n  \"q4\": {\"dx\": 0.0, \"dy\": 0.0, \"dz\": 0.0},\n  \"q5\": {\"dx\": 0.0, \"dy\": 0.0, \"dz\": 0.0},\n  \"q6\": {\"x\": \"behind\", \"y\": \"left\", \"z\": \"above\"}\n}",
+  "elapsed_s": 4.366
+}

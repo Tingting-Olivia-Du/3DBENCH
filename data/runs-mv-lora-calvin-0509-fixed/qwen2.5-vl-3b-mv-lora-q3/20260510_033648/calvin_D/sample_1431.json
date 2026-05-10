@@ -1,0 +1,15 @@
+{
+  "sample_id": 1431,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T03:50:00",
+  "task_description": "lift the pink block lying in the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_01/window_0331/sample_1431_t01_w0331_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_01/window_0331/sample_1431_t01_w0331_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_01/window_0331/sample_1431_t01_w0331_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.534
+}

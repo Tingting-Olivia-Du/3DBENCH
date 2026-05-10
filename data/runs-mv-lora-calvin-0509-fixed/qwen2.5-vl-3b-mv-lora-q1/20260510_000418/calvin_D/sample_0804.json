@@ -1,0 +1,15 @@
+{
+  "sample_id": 804,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:29:20",
+  "task_description": "pick up the blue block from the sliding cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_08/window_0186/sample_0804_t08_w0186_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_08/window_0186/sample_0804_t08_w0186_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_08/window_0186/sample_0804_t08_w0186_close_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.904, \"y\": 0.363, \"z\": 0.397}, \"q1_dest\": {\"x\": -0.181, \"y\": 0.411, \"z\": 0.0}}",
+  "elapsed_s": 2.18
+}

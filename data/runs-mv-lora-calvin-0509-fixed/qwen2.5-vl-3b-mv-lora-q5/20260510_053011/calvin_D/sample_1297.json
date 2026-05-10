@@ -1,0 +1,15 @@
+{
+  "sample_id": 1297,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:51:50",
+  "task_description": "turn on the light bulb",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_06/window_0302/sample_1297_t06_w0302_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_06/window_0302/sample_1297_t06_w0302_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_06/window_0302/sample_1297_t06_w0302_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.19, \"dy\": -0.02, \"dz\": -0.02}}",
+  "elapsed_s": 0.921
+}

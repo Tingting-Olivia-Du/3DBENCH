@@ -1,0 +1,15 @@
+{
+  "sample_id": 3459,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_064152",
+  "sample_timestamp": "2026-05-10T07:22:40",
+  "task_description": "grasp the pink block from the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_01/window_0809/sample_3459_t01_w0809_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_01/window_0809/sample_3459_t01_w0809_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_01/window_0809/sample_3459_t01_w0809_close_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"aligned_y\", \"z\": \"below\"}}",
+  "elapsed_s": 0.671
+}

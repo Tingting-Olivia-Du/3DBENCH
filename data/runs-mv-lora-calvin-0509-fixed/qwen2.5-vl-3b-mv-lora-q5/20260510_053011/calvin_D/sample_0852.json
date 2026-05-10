@@ -1,0 +1,15 @@
+{
+  "sample_id": 852,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:44:31",
+  "task_description": "go towards the red block in the drawer and lift it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_12/window_0197/sample_0852_t12_w0197_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_12/window_0197/sample_0852_t12_w0197_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_12/window_0197/sample_0852_t12_w0197_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": -0.135, \"dz\": -0.157}}",
+  "elapsed_s": 0.989
+}

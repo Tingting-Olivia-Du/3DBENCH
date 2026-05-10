@@ -1,0 +1,15 @@
+{
+  "sample_id": 387,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:23:15",
+  "task_description": "go towards the pink block in the drawer and lift it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_01/window_0094/sample_0387_t01_w0094_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_01/window_0094/sample_0387_t01_w0094_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_01/window_0094/sample_0387_t01_w0094_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": -0.291, \"y\": -0.004, \"z\": 0.547}}",
+  "elapsed_s": 1.139
+}

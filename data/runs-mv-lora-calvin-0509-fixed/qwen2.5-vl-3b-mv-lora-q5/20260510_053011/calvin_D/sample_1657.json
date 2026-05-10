@@ -1,0 +1,15 @@
+{
+  "sample_id": 1657,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:57:46",
+  "task_description": "toggle the button to turn off the led light",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_11/window_0376/sample_1657_t11_w0376_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_11/window_0376/sample_1657_t11_w0376_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_11/window_0376/sample_1657_t11_w0376_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": -0.001, \"dz\": -0.027}}",
+  "elapsed_s": 0.999
+}

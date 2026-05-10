@@ -1,0 +1,15 @@
+{
+  "sample_id": 1075,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:36:08",
+  "task_description": "turn off the green lamp",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_11/window_0246/sample_1075_t11_w0246_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_11/window_0246/sample_1075_t11_w0246_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_11/window_0246/sample_1075_t11_w0246_init_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.091, \"y\": -0.448, \"z\": 0.51}}",
+  "elapsed_s": 1.091
+}

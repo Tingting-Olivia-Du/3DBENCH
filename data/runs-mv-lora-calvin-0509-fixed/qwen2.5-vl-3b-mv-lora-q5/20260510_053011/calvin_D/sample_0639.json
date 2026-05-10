@@ -1,0 +1,15 @@
+{
+  "sample_id": 639,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:41:00",
+  "task_description": "open the drawer",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_17/window_0149/sample_0639_t17_w0149_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_17/window_0149/sample_0639_t17_w0149_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_17/window_0149/sample_0639_t17_w0149_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": -0.005, \"dz\": -0.097}}",
+  "elapsed_s": 0.98
+}

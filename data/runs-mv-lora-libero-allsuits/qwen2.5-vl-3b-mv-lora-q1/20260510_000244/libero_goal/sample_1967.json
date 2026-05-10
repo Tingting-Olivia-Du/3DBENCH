@@ -1,0 +1,15 @@
+{
+  "sample_id": 1967,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T00:39:38",
+  "task_description": "put the bowl on the stove",
+  "image_path": "gt-q6-mv-test/libero_goal/task_01/init_state_10/sample_1967_t01_s10_traj_024of043_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_01/init_state_10/sample_1967_t01_s10_traj_024of043_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_01/init_state_10/sample_1967_t01_s10_traj_024of043_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.579, \"y\": -0.002, \"z\": -0.014}, \"q1_dest\": {\"x\": 0.25, \"y\": 0.211, \"z\": -0.007}}",
+  "elapsed_s": 2.216
+}

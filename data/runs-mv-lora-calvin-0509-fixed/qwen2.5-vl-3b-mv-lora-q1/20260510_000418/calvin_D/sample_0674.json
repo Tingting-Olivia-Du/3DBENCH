@@ -1,0 +1,15 @@
+{
+  "sample_id": 674,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:25:17",
+  "task_description": "pick up the red block on the table",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_03/window_0156/sample_0674_t03_w0156_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_03/window_0156/sample_0674_t03_w0156_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_03/window_0156/sample_0674_t03_w0156_close_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.239, \"y\": -0.35, \"z\": 0.415}, \"q1_dest\": {\"x\": -0.175, \"y\": 0.597, \"z\": 0.42}}",
+  "elapsed_s": 2.204
+}

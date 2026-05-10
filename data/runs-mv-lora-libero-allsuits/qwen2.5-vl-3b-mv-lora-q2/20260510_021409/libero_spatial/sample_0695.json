@@ -1,0 +1,15 @@
+{
+  "sample_id": 695,
+  "suite": "libero_spatial",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021409",
+  "sample_timestamp": "2026-05-10T03:19:32",
+  "task_description": "pick up the black bowl on the stove and place it on the plate",
+  "image_path": "gt-q6-mv-test/libero_spatial/task_07/init_state_27/sample_0695_t07_s27_traj_000of028_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_spatial/task_07/init_state_27/sample_0695_t07_s27_traj_000of028_agent.png",
+    "wrist": "gt-q6-mv-test/libero_spatial/task_07/init_state_27/sample_0695_t07_s27_traj_000of028_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.457, \"y\": -0.009, \"z\": 0.257}}",
+  "elapsed_s": 1.071
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 4110,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T02:09:29",
+  "task_description": "go towards the red block in the drawer and pick it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_12/window_0969/sample_4110_t12_w0969_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_12/window_0969/sample_4110_t12_w0969_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_12/window_0969/sample_4110_t12_w0969_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.59, \"y\": -0.073, \"z\": 0.419}, \"q1_dest\": {\"x\": -0.2, \"y\": 0.3, \"z\": 0.4}}}",
+  "elapsed_s": 2.078
+}

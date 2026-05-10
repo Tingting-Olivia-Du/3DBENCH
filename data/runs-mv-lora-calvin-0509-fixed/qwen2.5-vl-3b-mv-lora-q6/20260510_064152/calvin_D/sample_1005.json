@@ -1,0 +1,15 @@
+{
+  "sample_id": 1005,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_064152",
+  "sample_timestamp": "2026-05-10T06:54:50",
+  "task_description": "sweep the blue block to the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_28/window_0228/sample_1005_t28_w0228_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_28/window_0228/sample_1005_t28_w0228_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_28/window_0228/sample_1005_t28_w0228_init_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"right\", \"z\": \"below\"}}",
+  "elapsed_s": 0.737
+}

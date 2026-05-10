@@ -1,0 +1,15 @@
+{
+  "sample_id": 720,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:29:30",
+  "task_description": "slide the door to the right side",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_16/window_0167/sample_0720_t16_w0167_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_16/window_0167/sample_0720_t16_w0167_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_16/window_0167/sample_0720_t16_w0167_init_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.091, \"y\": -0.429, \"z\": 0.507}}",
+  "elapsed_s": 1.08
+}

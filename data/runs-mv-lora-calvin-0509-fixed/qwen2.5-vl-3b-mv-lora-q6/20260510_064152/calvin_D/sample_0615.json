@@ -1,0 +1,15 @@
+{
+  "sample_id": 615,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_064152",
+  "sample_timestamp": "2026-05-10T06:50:00",
+  "task_description": "grasp the handle of the drawer and close it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_09/window_0145/sample_0615_t09_w0145_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_09/window_0145/sample_0615_t09_w0145_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_09/window_0145/sample_0615_t09_w0145_init_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"aligned_y\", \"z\": \"below\"}}",
+  "elapsed_s": 0.752
+}

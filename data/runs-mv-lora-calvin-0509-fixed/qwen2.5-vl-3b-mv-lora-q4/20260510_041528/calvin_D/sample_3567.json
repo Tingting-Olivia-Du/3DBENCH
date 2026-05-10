@@ -1,0 +1,15 @@
+{
+  "sample_id": 3567,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q4",
+  "run_timestamp": "20260510_041528",
+  "sample_timestamp": "2026-05-10T05:18:36",
+  "task_description": "go towards the pink block in the drawer and grasp it",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_01/window_0838/sample_3567_t01_w0838_traj_001of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_01/window_0838/sample_3567_t01_w0838_traj_001of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_01/window_0838/sample_3567_t01_w0838_traj_001of003_wrist.png"
+  },
+  "raw_response": "{\"q4\": {\"dx\": 0.59, \"dy\": -0.58, \"dz\": -0.56}}",
+  "elapsed_s": 0.888
+}

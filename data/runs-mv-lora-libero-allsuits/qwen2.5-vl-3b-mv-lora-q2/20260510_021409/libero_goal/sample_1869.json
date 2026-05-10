@@ -1,0 +1,15 @@
+{
+  "sample_id": 1869,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021409",
+  "sample_timestamp": "2026-05-10T02:32:15",
+  "task_description": "open the middle drawer of the cabinet",
+  "image_path": "gt-q6-mv-test/libero_goal/task_00/init_state_05/sample_1869_t00_s05_traj_170of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_00/init_state_05/sample_1869_t00_s05_traj_170of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_00/init_state_05/sample_1869_t00_s05_traj_170of300_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.579, \"y\": -0.091, \"z\": 0.027}}",
+  "elapsed_s": 1.139
+}

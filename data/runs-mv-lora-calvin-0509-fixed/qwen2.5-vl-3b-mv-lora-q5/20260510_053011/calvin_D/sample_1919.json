@@ -1,0 +1,15 @@
+{
+  "sample_id": 1919,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:02:05",
+  "task_description": "lift the red block from the table",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_03/window_0435/sample_1919_t03_w0435_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_03/window_0435/sample_1919_t03_w0435_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_03/window_0435/sample_1919_t03_w0435_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.029, \"dy\": 0.135, \"dz\": -0.13}}",
+  "elapsed_s": 0.931
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2343,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q4",
+  "run_timestamp": "20260510_035804",
+  "sample_timestamp": "2026-05-10T04:23:22",
+  "task_description": "push the plate to the front of the stove",
+  "image_path": "gt-q6-mv-test/libero_goal/task_05/init_state_21/sample_2343_t05_s21_traj_000of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_05/init_state_21/sample_2343_t05_s21_traj_000of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_05/init_state_21/sample_2343_t05_s21_traj_000of300_wrist.png"
+  },
+  "raw_response": "{\"q4\": {\"dx\": 0.79, \"dy\": -0.58, \"dz\": -0.21}}",
+  "elapsed_s": 1.252
+}

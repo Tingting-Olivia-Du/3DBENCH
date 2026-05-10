@@ -1,0 +1,15 @@
+{
+  "sample_id": 1513,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_033648",
+  "sample_timestamp": "2026-05-10T03:50:44",
+  "task_description": "slide the red block towards the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_18/window_0347/sample_1513_t18_w0347_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_18/window_0347/sample_1513_t18_w0347_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_18/window_0347/sample_1513_t18_w0347_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.528
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 3392,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q3",
+  "run_timestamp": "20260510_032346",
+  "sample_timestamp": "2026-05-10T03:30:00",
+  "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+  "image_path": "gt-q6-mv-test/libero_10/task_06/init_state_43/sample_3392_t06_s43_traj_256of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_06/init_state_43/sample_3392_t06_s43_traj_256of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_06/init_state_43/sample_3392_t06_s43_traj_256of300_wrist.png"
+  },
+  "raw_response": "{\"q3\": {\"can_close\": \"no\"}}",
+  "elapsed_s": 0.569
+}

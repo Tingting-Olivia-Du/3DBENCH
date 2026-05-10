@@ -1,0 +1,15 @@
+{
+  "sample_id": 2989,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T06:19:45",
+  "task_description": "push the sliding door to the right",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_16/window_0699/sample_2989_t16_w0699_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_16/window_0699/sample_2989_t16_w0699_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_16/window_0699/sample_2989_t16_w0699_close_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.149, \"dy\": -0.002, \"dz\": -0.058}}",
+  "elapsed_s": 0.997
+}

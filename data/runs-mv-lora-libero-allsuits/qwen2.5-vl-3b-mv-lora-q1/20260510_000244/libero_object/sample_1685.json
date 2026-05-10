@@ -1,0 +1,15 @@
+{
+  "sample_id": 1685,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:33:54",
+  "task_description": "pick up the chocolate pudding and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_08/init_state_05/sample_1685_t08_s05_traj_026of032_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_08/init_state_05/sample_1685_t08_s05_traj_026of032_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_08/init_state_05/sample_1685_t08_s05_traj_026of032_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.637, \"y\": -0.196, \"z\": 0.009}, \"q1_dest\": {\"x\": 0.593, \"y\": 0.253, \"z\": -0.005}}",
+  "elapsed_s": 2.235
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 138,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:18:34",
+  "task_description": "grasp the blue block on the table, then lift it up",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_07/window_0032/sample_0138_t07_w0032_traj_002of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_07/window_0032/sample_0138_t07_w0032_traj_002of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_07/window_0032/sample_0138_t07_w0032_traj_002of003_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.249, \"y\": -0.109, \"z\": 0.505}}",
+  "elapsed_s": 1.152
+}

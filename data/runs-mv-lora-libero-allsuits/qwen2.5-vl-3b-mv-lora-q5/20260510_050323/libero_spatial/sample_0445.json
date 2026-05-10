@@ -1,0 +1,15 @@
+{
+  "sample_id": 445,
+  "suite": "libero_spatial",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_050323",
+  "sample_timestamp": "2026-05-10T06:00:11",
+  "task_description": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+  "image_path": "gt-q6-mv-test/libero_spatial/task_04/init_state_38/sample_0445_t04_s38_traj_299of300_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_spatial/task_04/init_state_38/sample_0445_t04_s38_traj_299of300_agent.png",
+    "wrist": "gt-q6-mv-test/libero_spatial/task_04/init_state_38/sample_0445_t04_s38_traj_299of300_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.079, \"dy\": -0.082, \"dz\": -0.057}}",
+  "elapsed_s": 1.013
+}

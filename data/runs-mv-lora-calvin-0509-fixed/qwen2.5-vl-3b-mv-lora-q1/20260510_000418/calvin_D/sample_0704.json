@@ -1,0 +1,15 @@
+{
+  "sample_id": 704,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T00:26:14",
+  "task_description": "move the door to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_02/window_0163/sample_0704_t02_w0163_close_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_02/window_0163/sample_0704_t02_w0163_close_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_02/window_0163/sample_0704_t02_w0163_close_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"articulation\", \"q1\": {\"x\": 0.2, \"y\": -0.098, \"z\": 0.4}, \"q1_dest\": {\"x\": null, \"y\": null, \"z\": null}}",
+  "elapsed_s": 1.725
+}

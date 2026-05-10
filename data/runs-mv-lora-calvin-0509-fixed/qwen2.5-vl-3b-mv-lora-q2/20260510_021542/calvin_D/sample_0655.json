@@ -1,0 +1,15 @@
+{
+  "sample_id": 655,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021542",
+  "sample_timestamp": "2026-05-10T02:28:17",
+  "task_description": "move the light switch to turn on the light bulb",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_06/window_0153/sample_0655_t06_w0153_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_06/window_0153/sample_0655_t06_w0153_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_06/window_0153/sample_0655_t06_w0153_init_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.091, \"y\": -0.439, \"z\": 0.547}}",
+  "elapsed_s": 1.173
+}

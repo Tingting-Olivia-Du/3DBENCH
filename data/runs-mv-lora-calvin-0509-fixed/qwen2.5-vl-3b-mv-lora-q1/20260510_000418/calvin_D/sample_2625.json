@@ -1,0 +1,15 @@
+{
+  "sample_id": 2625,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000418",
+  "sample_timestamp": "2026-05-10T01:24:42",
+  "task_description": "grasp the pink block lying in the sliding cabinet",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_15/window_0611/sample_2625_t15_w0611_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_15/window_0611/sample_2625_t15_w0611_init_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_15/window_0611/sample_2625_t15_w0611_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.2, \"y\": -0.15, \"z\": 0.0}, \"q1_dest\": {\"x\": -0.09, \"y\": 0.4, \"z\": 0.0}}",
+  "elapsed_s": 1.909
+}

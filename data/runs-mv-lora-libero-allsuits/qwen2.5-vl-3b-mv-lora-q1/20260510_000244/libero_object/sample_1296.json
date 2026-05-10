@@ -1,0 +1,15 @@
+{
+  "sample_id": 1296,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:19:32",
+  "task_description": "pick up the ketchup and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_04/init_state_32/sample_1296_t04_s32_init_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_04/init_state_32/sample_1296_t04_s32_init_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_04/init_state_32/sample_1296_t04_s32_init_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.476, \"y\": -0.243, \"z\": 0.07}, \"q1_dest\": {\"x\": 0.612, \"y\": 0.259, \"z\": -0.005}}",
+  "elapsed_s": 2.216
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 2472,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q2",
+  "run_timestamp": "20260510_021409",
+  "sample_timestamp": "2026-05-10T02:43:35",
+  "task_description": "put the cream cheese in the bowl",
+  "image_path": "gt-q6-mv-test/libero_goal/task_06/init_state_43/sample_2472_t06_s43_traj_021of031_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_06/init_state_43/sample_2472_t06_s43_traj_021of031_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_06/init_state_43/sample_2472_t06_s43_traj_021of031_wrist.png"
+  },
+  "raw_response": "{\"q2\": {\"x\": 0.579, \"y\": -0.004, \"z\": 0.257}}",
+  "elapsed_s": 1.087
+}

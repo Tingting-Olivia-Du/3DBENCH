@@ -1,0 +1,15 @@
+{
+  "sample_id": 176,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:33:20",
+  "task_description": "grasp the door handle, then slide the door to the left",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_02/window_0040/sample_0176_t02_w0040_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_02/window_0040/sample_0176_t02_w0040_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_02/window_0040/sample_0176_t02_w0040_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.149, \"dy\": -0.152, \"dz\": -0.155}}",
+  "elapsed_s": 0.96
+}

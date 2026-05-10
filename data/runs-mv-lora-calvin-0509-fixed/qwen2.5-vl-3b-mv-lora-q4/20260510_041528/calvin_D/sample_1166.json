@@ -1,0 +1,15 @@
+{
+  "sample_id": 1166,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q4",
+  "run_timestamp": "20260510_041528",
+  "sample_timestamp": "2026-05-10T04:36:20",
+  "task_description": "grasp the red block lying in the slider",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_10/window_0271/sample_1166_t10_w0271_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_10/window_0271/sample_1166_t10_w0271_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_10/window_0271/sample_1166_t10_w0271_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q4\": {\"dx\": 0.59, \"dy\": -0.58, \"dz\": -0.56}}",
+  "elapsed_s": 1.06
+}

@@ -1,0 +1,15 @@
+{
+  "sample_id": 1386,
+  "suite": "calvin_D",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_053011",
+  "sample_timestamp": "2026-05-10T05:53:19",
+  "task_description": "in the cabinet pick up the pink block",
+  "image_path": "gt-q6-mv-calvin/calvin_D/task_15/window_0322/sample_1386_t15_w0322_traj_000of003_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-calvin/calvin_D/task_15/window_0322/sample_1386_t15_w0322_traj_000of003_agent.png",
+    "wrist": "gt-q6-mv-calvin/calvin_D/task_15/window_0322/sample_1386_t15_w0322_traj_000of003_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.192, \"dy\": 0.135, \"dz\": -0.222}}",
+  "elapsed_s": 1.005
+}

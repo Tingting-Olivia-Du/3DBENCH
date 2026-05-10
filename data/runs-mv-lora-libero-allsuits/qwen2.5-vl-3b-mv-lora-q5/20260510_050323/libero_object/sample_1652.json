@@ -1,0 +1,15 @@
+{
+  "sample_id": 1652,
+  "suite": "libero_object",
+  "model": "qwen2.5-vl-3b-mv-lora-q5",
+  "run_timestamp": "20260510_050323",
+  "sample_timestamp": "2026-05-10T05:49:15",
+  "task_description": "pick up the milk and place it in the basket",
+  "image_path": "gt-q6-mv-test/libero_object/task_07/init_state_48/sample_1652_t07_s48_traj_011of040_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_object/task_07/init_state_48/sample_1652_t07_s48_traj_011of040_agent.png",
+    "wrist": "gt-q6-mv-test/libero_object/task_07/init_state_48/sample_1652_t07_s48_traj_011of040_wrist.png"
+  },
+  "raw_response": "{\"q5\": {\"dx\": 0.027, \"dy\": -0.192, \"dz\": -0.162}}",
+  "elapsed_s": 1.012
+}

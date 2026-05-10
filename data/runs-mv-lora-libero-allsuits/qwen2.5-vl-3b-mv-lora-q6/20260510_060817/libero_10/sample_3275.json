@@ -1,0 +1,15 @@
+{
+  "sample_id": 3275,
+  "suite": "libero_10",
+  "model": "qwen2.5-vl-3b-mv-lora-q6",
+  "run_timestamp": "20260510_060817",
+  "sample_timestamp": "2026-05-10T06:15:15",
+  "task_description": "pick up the book and place it in the back compartment of the caddy",
+  "image_path": "gt-q6-mv-test/libero_10/task_05/init_state_27/sample_3275_t05_s27_traj_027of033_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_10/task_05/init_state_27/sample_3275_t05_s27_traj_027of033_agent.png",
+    "wrist": "gt-q6-mv-test/libero_10/task_05/init_state_27/sample_3275_t05_s27_traj_027of033_wrist.png"
+  },
+  "raw_response": "{\"q6\": {\"x\": \"in_front\", \"y\": \"aligned_y\", \"z\": \"below\"}}",
+  "elapsed_s": 0.782
+}

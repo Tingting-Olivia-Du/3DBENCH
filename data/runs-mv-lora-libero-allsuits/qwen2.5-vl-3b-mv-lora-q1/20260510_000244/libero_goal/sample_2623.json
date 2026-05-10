@@ -1,0 +1,15 @@
+{
+  "sample_id": 2623,
+  "suite": "libero_goal",
+  "model": "qwen2.5-vl-3b-mv-lora-q1",
+  "run_timestamp": "20260510_000244",
+  "sample_timestamp": "2026-05-10T01:01:01",
+  "task_description": "put the bowl on the plate",
+  "image_path": "gt-q6-mv-test/libero_goal/task_08/init_state_21/sample_2623_t08_s21_traj_033of048_agent.png",
+  "image_paths": {
+    "agent": "gt-q6-mv-test/libero_goal/task_08/init_state_21/sample_2623_t08_s21_traj_033of048_agent.png",
+    "wrist": "gt-q6-mv-test/libero_goal/task_08/init_state_21/sample_2623_t08_s21_traj_033of048_wrist.png"
+  },
+  "raw_response": "{\"task_type\": \"pick_and_place\", \"q1\": {\"x\": 0.709, \"y\": -0.005, \"z\": -0.009}, \"q1_dest\": {\"x\": 0.732, \"y\": 0.19, \"z\": -0.009}}",
+  "elapsed_s": 2.245
+}
