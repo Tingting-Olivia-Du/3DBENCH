@@ -1,0 +1,90 @@
+{
+  "manifest_glob": "data/gt-q6-mv/*/manifest.json",
+  "manifests": [
+    "data/gt-q6-mv/libero_10/manifest.json",
+    "data/gt-q6-mv/libero_goal/manifest.json",
+    "data/gt-q6-mv/libero_object/manifest.json",
+    "data/gt-q6-mv/libero_spatial/manifest.json"
+  ],
+  "val_task": 8,
+  "test_task": 9,
+  "fold_sizes": {
+    "train": 1504,
+    "val": 189,
+    "test": 185
+  },
+  "train_tasks_per_suite": {
+    "libero_10": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "libero_goal": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "libero_object": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "libero_spatial": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "per_dim_counts": {
+    "q1": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    },
+    "q2": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    },
+    "q3": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    },
+    "q4": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    },
+    "q5": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    },
+    "q6": {
+      "train": 1504,
+      "val": 189,
+      "test": 185
+    }
+  }
+}
