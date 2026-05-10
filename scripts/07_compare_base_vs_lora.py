@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Compare Qwen2.5-VL-3B base vs per-dim LoRA on the CALVIN benchmark.
+"""Compare Qwen2.5-VL-3B base vs per-dim LoRA on CALVIN or LIBERO.
 
 For each QA dimension (Q1, Q1_dest, Q2, Q3, Q4, Q5, Q6) the script:
-  - reads the base run    from data/runs-mv-base-calvin/qwen2.5-vl-3b/<latest>/
-  - reads the LoRA run    from data/runs-mv-lora-calvin/qwen2.5-vl-3b-mv-lora-<dim>/<latest>/
+  - reads the base run    from <base_root>/<base_slug>/<latest>/...
+  - reads the LoRA run    from <lora_root>/<lora_slug_template.format(dim=...)>/<latest>/...
   - parses each response with the existing ResponseParser
   - computes the dimension's primary metric using src/bench/metrics.py
   - reports base, LoRA, and the LoRA-vs-base delta
@@ -14,18 +14,33 @@ Per-dim primary metric (lower-is-better unless noted):
   Q4                   : mean cosine similarity (higher is better)
   Q6                   : per-axis accuracy + all-axes accuracy (higher is better)
 
-Output:
-  data/results-base-vs-lora-calvin.json  (full per-sample stats)
-  data/results-base-vs-lora-calvin.md    (concise table)
-
 Usage:
-  python scripts/07_compare_base_vs_lora_calvin.py
-  python scripts/07_compare_base_vs_lora_calvin.py \\
-      --base_root  data/runs-mv-base-calvin \\
-      --lora_root  data/runs-mv-lora-calvin \\
-      --manifest   data/gt-q6-mv-calvin/manifest.json \\
-      --out_json   data/results-base-vs-lora-calvin.json \\
-      --out_md     data/results-base-vs-lora-calvin.md
+  # CALVIN (default)
+  python scripts/07_compare_base_vs_lora.py --benchmark calvin
+
+  # LIBERO, optionally restricted to one suite
+  python scripts/07_compare_base_vs_lora.py --benchmark libero \\
+      --suite_filter libero_goal
+
+  # Fully explicit paths still work
+  python scripts/07_compare_base_vs_lora.py \\
+      --base_root  data/runs-mv-base-libero \\
+      --lora_root  data/runs-mv-lora-libero-new \\
+      --manifest   data/gt-q6-mv/manifest.json \\
+      --suite_filter libero_goal \\
+      --out_json   data/results-base-vs-lora-libero-goal.json \\
+      --out_md     data/results-base-vs-lora-libero-goal.md
+
+# libero 全 suite(LoRA 跑齐后)
+python scripts/07_compare_base_vs_lora.py --benchmark libero
+
+# libero 单 suite
+python scripts/07_compare_base_vs_lora.py --benchmark libero --suite_filter libero_goal
+
+# calvin(行为不变)
+python scripts/07_compare_base_vs_lora.py --benchmark calvin
+
+      
 """
 from __future__ import annotations
 
@@ -50,22 +65,71 @@ from bench.metrics import (
 # Args
 # ---------------------------------------------------------------------------
 
+# Per-benchmark defaults. Used when the user passes --benchmark and does not
+# explicitly override the corresponding flag.
+BENCHMARK_PRESETS = {
+    "calvin": {
+        "base_root": "data/runs-mv-base-calvin",
+        "lora_root": "data/runs-mv-lora-calvin",
+        "manifest":  "data/gt-q6-mv-calvin/manifest.json",
+        "out_json":  "data/results-base-vs-lora-calvin.json",
+        "out_md":    "data/results-base-vs-lora-calvin.md",
+        "title":     "Qwen2.5-VL-3B base vs LoRA on CALVIN",
+    },
+    "libero": {
+        "base_root": "data/runs-mv-base-libero",
+        # Note: current LoRA runs live under runs-mv-lora-libero-new; if you
+        # have an older runs-mv-lora-libero/ pass --lora_root explicitly.
+        "lora_root": "data/runs-mv-lora-libero-new",
+        "manifest":  "data/gt-q6-mv/manifest.json",
+        "out_json":  "data/results-base-vs-lora-libero.json",
+        "out_md":    "data/results-base-vs-lora-libero.md",
+        "title":     "Qwen2.5-VL-3B base vs LoRA on LIBERO",
+    },
+}
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--base_root",  default="data/runs-mv-base-calvin",
-                   help="Root containing qwen2.5-vl-3b/<latest>/<suite>/sample_*.json")
-    p.add_argument("--lora_root",  default="data/runs-mv-lora-calvin",
-                   help="Root containing qwen2.5-vl-3b-mv-lora-<dim>/<latest>/...")
+    p.add_argument("--benchmark", choices=sorted(BENCHMARK_PRESETS.keys()), default="calvin",
+                   help="Benchmark preset; sets defaults for --base_root / --lora_root / "
+                        "--manifest / --out_json / --out_md unless those are passed explicitly.")
+    p.add_argument("--base_root",  default=None,
+                   help="Root containing <base_slug>/<latest>/<suite>/sample_*.json. "
+                        "Defaults from --benchmark.")
+    p.add_argument("--lora_root",  default=None,
+                   help="Root containing <lora_slug>/<latest>/... . Defaults from --benchmark.")
     p.add_argument("--base_slug",  default="qwen2.5-vl-3b",
                    help="Subdir name of the base model under base_root.")
     p.add_argument("--lora_slug_template", default="qwen2.5-vl-3b-mv-lora-{dim}",
                    help="Subdir name pattern for LoRA-augmented runs.")
-    p.add_argument("--manifest", default="data/gt-q6-mv-calvin/manifest.json",
-                   help="Path to the CALVIN GT manifest (for ground-truth values).")
-    p.add_argument("--out_json", default="data/results-base-vs-lora-calvin.json")
-    p.add_argument("--out_md",   default="data/results-base-vs-lora-calvin.md")
+    p.add_argument("--manifest", default=None,
+                   help="Path to the GT manifest. Defaults from --benchmark.")
+    p.add_argument("--suite_filter", default=None,
+                   help="If set, only sample_ids whose manifest entry has suite=<this> "
+                        "are scored (e.g. libero_goal). Default: all suites in the manifest.")
+    p.add_argument("--out_json", default=None,
+                   help="Output JSON path. Defaults from --benchmark (auto-suffixed with "
+                        "suite when --suite_filter is given).")
+    p.add_argument("--out_md",   default=None,
+                   help="Output markdown path. Same defaulting rule as --out_json.")
     p.add_argument("--dims", nargs="+", default=["q1", "q2", "q3", "q4", "q5", "q6"])
-    return p.parse_args()
+    args = p.parse_args()
+
+    preset = BENCHMARK_PRESETS[args.benchmark]
+    if args.base_root is None: args.base_root = preset["base_root"]
+    if args.lora_root is None: args.lora_root = preset["lora_root"]
+    if args.manifest  is None: args.manifest  = preset["manifest"]
+
+    # When a suite filter is set, suffix the default output paths so different
+    # suites don't overwrite each other. If the user gave explicit paths, leave them.
+    suite_suffix = f"-{args.suite_filter}" if args.suite_filter else ""
+    if args.out_json is None:
+        args.out_json = preset["out_json"].replace(".json", f"{suite_suffix}.json")
+    if args.out_md is None:
+        args.out_md = preset["out_md"].replace(".md", f"{suite_suffix}.md")
+    args._title = preset["title"] + (f" — {args.suite_filter}" if args.suite_filter else "")
+    return args
 
 
 # ---------------------------------------------------------------------------
@@ -84,19 +148,27 @@ def _resolve_run_dir(model_dir: Path) -> Path:
     return sorted(runs)[-1]
 
 
-def load_responses_by_sample(run_dir: Path) -> dict[int, dict]:
-    """Load all sample_*.json under run_dir/<suite>/, keyed by sample_id."""
-    out: dict[int, dict] = {}
+def load_responses_by_sample(run_dir: Path) -> dict[str, dict]:
+    """Load all sample_*.json under run_dir/<suite>/, keyed by image_path.
+
+    NOTE: We key on image_path rather than sample_id because the two run
+    pipelines disagree on what sample_id means — base runs use a global id
+    that spans all suites, LoRA runs use a per-suite local id. image_path is
+    identical across both for the same underlying frame.
+    """
+    out: dict[str, dict] = {}
     for sj in run_dir.rglob("sample_*.json"):
         rec = json.loads(sj.read_text())
-        out[int(rec["sample_id"])] = rec
+        out[rec["image_path"]] = rec
     return out
 
 
-def load_manifest_by_sample(manifest_path: Path) -> dict[int, dict]:
-    """Load the GT manifest, keyed by sample_id."""
+def load_manifest_by_sample(manifest_path: Path, suite_filter: str | None = None) -> dict[str, dict]:
+    """Load the GT manifest, keyed by image_path. Optionally restrict to one suite."""
     raw = json.loads(manifest_path.read_text())
-    return {int(r["sample_id"]): r for r in raw}
+    if suite_filter:
+        raw = [r for r in raw if r.get("suite") == suite_filter]
+    return {r["image_path"]: r for r in raw}
 
 
 # ---------------------------------------------------------------------------

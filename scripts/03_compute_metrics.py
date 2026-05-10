@@ -18,13 +18,14 @@ Usage
   # Custom paths
   python scripts/03_compute_metrics.py \
       --manifest data/gt/manifest.json \
-      --responses_dir data/runs/20260416_213810 \
-      --out data/runs/20260416_213810/results-stat.json
+      --responses_dir data/runs-mv-base-libero \
+      --out data/runs/mv-0509-results-stat.json
 
 python scripts/03_compute_metrics.py \
-    --responses_dir data/runs/20260425_051738 \
-    --out data/runs/20260425_051738/results-stat.json \
-    --report data/runs/20260425_051738/results.md
+    --manifest data/gt-q6-mv/manifest.json \
+    --responses_dir data/runs-mv-base-libero \
+    --out data/results-base-libero-test-all-qwen-models.json \
+    --report data/results-base-libero-test-all-qwen-models.md
 
       
 """

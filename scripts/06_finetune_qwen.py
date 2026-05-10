@@ -60,7 +60,12 @@ def parse_args() -> argparse.Namespace:
                    help="Root for resolving relative image_paths inside the JSONL.")
     p.add_argument("--base_model",
                    default="/umd-datapool/tingting/models/Qwen2.5-VL-3B-Instruct",
-                   help="Path or HF id of the base model.")
+                   help="Path or HF id of the base model used for LOADING weights.")
+    p.add_argument("--base_model_hub_id",
+                   default="Qwen/Qwen2.5-VL-3B-Instruct",
+                   help="HF Hub model id to record in adapter_config.json / model card. "
+                        "Must be a valid hub id (org/name) so the adapter is portable "
+                        "and uploadable to HuggingFace Hub.")
     p.add_argument("--output_dir", required=True)
 
     # LoRA
@@ -207,12 +212,20 @@ def main() -> None:
     from peft import LoraConfig, get_peft_model
 
     print(f"Loading base model: {args.base_model}")
+    print(f"  (will record base_model = {args.base_model_hub_id} in adapter metadata)")
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         args.base_model,
         torch_dtype=torch.bfloat16 if args.bf16 else torch.float16,
         device_map="auto",
     )
     processor = AutoProcessor.from_pretrained(args.base_model)
+
+    # Override the name PEFT will write into adapter_config.json + model card.
+    # PEFT reads model.config._name_or_path when creating the adapter, so we
+    # rewrite it to the public Hub id before get_peft_model() — otherwise the
+    # local filesystem path leaks into the artifact and breaks `huggingface-cli
+    # upload` (Hub validates base_model is a valid org/name).
+    model.config._name_or_path = args.base_model_hub_id
 
     # ── Freeze the vision tower (vit + merger). LoRA only on LLM modules. ──
     # Qwen2.5-VL exposes the vision tower as `model.visual` (or `model.model.visual`
@@ -294,7 +307,8 @@ def main() -> None:
     # Also drop a small metadata file so 02_run_vlm_eval.py knows the dim.
     (final_dir / "adapter_meta.json").write_text(json.dumps({
         "dim": args.dim,
-        "base_model": args.base_model,
+        "base_model": args.base_model_hub_id,
+        "base_model_local_path": args.base_model,
         "lora_rank": args.lora_rank,
         "lora_alpha": args.lora_alpha,
         "train_jsonl": args.train_jsonl,
