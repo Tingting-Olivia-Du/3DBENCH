@@ -39,22 +39,19 @@ system: |
       Z-axis: up. Z+ is up out of the floor.
   - Axis labels for Q6 (used by ground-truth labels in this benchmark):
       X+ → labelled "in_front"   (target_x > gripper_x along world X)
-      Y+ → labelled "left"       (target_y > gripper_y along world Y)
+      Y+ → labelled "right"      (target_y > gripper_y along world Y)
       Z+ → labelled "above"      (target_z > gripper_z)
     These labels follow the SIGN of (target − gripper) on each WORLD axis.
-    They are NOT defined relative to the gripper's facing direction or the
-    camera. In particular, "left" here means world Y+, which is the side
-    opposite the robot base (NOT the side a person standing at the robot
-    would call "left").
+    They are NOT defined relative to the camera view. In CALVIN's world
+    frame, Y+ points away from the robot base, and is labelled "right".
 
     IMPORTANT — visual mapping in the static camera (agent view):
     The static camera looks down on the play table from upper-right, so the
     image directions DO NOT match world axes:
       - World X+ (= "in_front") visually points to upper-right in the image
                                 (it is also somewhat toward the camera).
-      - World Y+ (= "left")     visually points to image-RIGHT
-                                (NOT image-left — the static camera is offset,
-                                 so the GT "left" label is visually rightward).
+      - World Y+ (= "right")    visually points to image-RIGHT
+                                (the static camera is offset from the side).
       - World Z+ (= "above")    points up in the image (almost vertical).
     Distinguishing world X+ from world Y+ in the static view is HARD because
     both project mostly toward image-right. Use the WRIST view (which travels
@@ -141,6 +138,31 @@ user_template: |
   - Z-axis: "above" (Z+), "below" (Z-), or "aligned_z"
   Use "aligned_*" only if the offset on that axis is very small (a few centimeters).
   Expected format: "q6": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
+
+  Q7 - END-EFFECTOR ORIENTATION:
+  What is the current orientation of the robot's end-effector (gripper)?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Range: -180 to +180 degrees per axis.
+  Expected format: "q7": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q8 - TARGET OBJECT ORIENTATION:
+  What is the current orientation of the target object?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Expected format: "q8": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q9 - RELATIVE ROTATION (EE → TARGET):
+  What rotation must the end-effector undergo to align with the target object?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Expected format: "q9": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q10 - PAIRWISE OBJECT DISTANCE:
+  Among ALL visible scene objects EXCEPT the target and its destination, find the two closest objects
+  and report their names and the Euclidean distance between them in meters.
+  Expected format: "q10": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}
+
+  Q11 - GRIPPER OPENNESS:
+  How open is the gripper? Report a value between 0.0 (fully closed) and 1.0 (fully open).
+  Expected format: "q11": {{"openness": <float_0_to_1>}}
 
   Respond with ONLY the JSON object.
 

@@ -3,7 +3,7 @@
 # Coordinate frame definition:
 #   Origin : robot arm base center (mounted on the workspace table)
 #   X-axis : forward direction away from the robot, into the workspace (positive = further from robot)
-#   Y-axis : robot's LEFT direction (positive = to the robot's left when facing forward)
+#   Y-axis : robot's RIGHT direction (positive = to the robot's right when facing forward)
 #   Z-axis : upward (positive = higher)
 #   Units  : meters
 
@@ -20,7 +20,7 @@ system: |
   COORDINATE FRAME:
   - Origin: the robot arm's base center (where the robot is bolted to the table surface)
   - X-axis: forward (positive = further into the workspace, away from the robot body)
-  - Y-axis: left   (positive = to the robot's left when it faces forward)
+  - Y-axis: right  (positive = to the robot's right when it faces forward)
   - Z-axis: up     (positive = higher)
   - All distances are in METERS.
 
@@ -55,8 +55,12 @@ user_template: |
   Expected format: "task_type": "pick_and_place" or "task_type": "articulation"
 
   Q1 - SOURCE OBJECT POSITION:
-  What is the 3D position [x, y, z] of the PRIMARY OBJECT to be manipulated
+  What is the 3D position [x, y, z] of the PRIMARY OBJECT currently being manipulated
   (the object to pick up, or the articulated object such as a cabinet door)?
+  IMPORTANT: For multi-object tasks (e.g. "put both X and Y in the basket"), objects are
+  handled in the order they appear in the task description. The active target is the FIRST
+  object in the instruction that has NOT YET been placed at the destination. If the first
+  object is already at/near the destination, the active target switches to the next one.
   Expected format: "q1": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
 
   Q1_DEST - DESTINATION POSITION:
@@ -70,10 +74,15 @@ user_template: |
   What is the current 3D position [x, y, z] of the robot's end-effector (gripper center)?
   Expected format: "q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
 
-  Q3 - CAN GRIPPER CLOSE NOW:
-  Based on the current gripper and object positions visible in the image, can the gripper
-  close RIGHT NOW to successfully grasp the target object?
-  Answer "yes" ONLY if the gripper jaws are already positioned around the object.
+  Q3 - SHOULD GRIPPER CLOSE NOW:
+  Based on the current gripper and object positions visible in the image, should the gripper
+  close RIGHT NOW? Consider the gripper phase in the manipulation task:
+    - "approaching": gripper is open and moving toward the target → answer "no"
+    - "grasping": gripper is close to the target and about to grasp → answer "yes"
+    - "carrying": gripper is already closed and holding an object → answer "yes"
+    - "releasing": gripper is opening to release the object → answer "no"
+  Answer "yes" if the gripper jaws are positioned around the object and should close,
+  OR if the gripper is already holding an object.
   Expected format: "q3": {{"can_close": "yes"}} or "q3": {{"can_close": "no"}}
 
   Q4 - NEXT MOVEMENT DIRECTION:
@@ -85,7 +94,7 @@ user_template: |
   What is the relative 3D offset [dx, dy, dz] from the robot's end-effector (gripper center)
   to the TARGET OBJECT? In other words, compute: target_position - gripper_position.
   A positive dx means the target is further forward (X+) than the gripper.
-  A positive dy means the target is further to the robot's left (Y+) than the gripper.
+  A positive dy means the target is further to the robot's right (Y+) than the gripper.
   A positive dz means the target is higher (Z+) than the gripper.
   Expected format: "q5": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}
 
@@ -93,13 +102,41 @@ user_template: |
   Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
   Use ONLY the exact labels listed below (no other words):
   - X-axis: "in_front" (target is further from robot base, X+), "behind" (target is closer to robot base, X-), or "aligned_x"
-  - Y-axis: "left" (target is to the robot's left, Y+), "right" (target is to the robot's right, Y-), or "aligned_y"
+  - Y-axis: "right" (target is to the robot's right, Y+), "left" (target is to the robot's left, Y-), or "aligned_y"
   - Z-axis: "above" (target is higher, Z+), "below" (target is lower, Z-), or "aligned_z"
   Use "aligned_x"/"aligned_y"/"aligned_z" only if the offset on that axis is very small (a few centimeters or less).
   Expected format: "q6": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
 
+  Q7 - END-EFFECTOR ORIENTATION:
+  What is the current orientation of the robot's end-effector (gripper)?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Range: -180 to +180 degrees per axis.
+  Expected format: "q7": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q8 - TARGET OBJECT ORIENTATION:
+  What is the current orientation of the target object?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Expected format: "q8": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q9 - RELATIVE ROTATION (EE → TARGET):
+  What rotation must the end-effector undergo to align with the target object?
+  Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ intrinsic convention.
+  Expected format: "q9": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
+
+  Q10 - PAIRWISE OBJECT DISTANCE:
+  Among ALL visible scene objects EXCEPT the target and its destination, find the two closest objects
+  and report their names and the Euclidean distance between them in meters.
+  Expected format: "q10": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}
+
+  Q11 - GRIPPER OPENNESS:
+  How open is the gripper? Report a value between 0.0 (fully closed) and 1.0 (fully open).
+  Use the wrist view for a close-up look at the finger gap.
+  Note: during "carrying" phase the gripper is closed around an object (openness ≈ 0.0);
+  during "approaching" phase the gripper is typically wide open (openness ≈ 1.0).
+  Expected format: "q11": {{"openness": <float_0_to_1>}}
+
   Respond with ONLY the JSON object, for example (pick_and_place):
-  {{"task_type": "pick_and_place", "q1": {{"x": 0.55, "y": 0.20, "z": -0.01}}, "q1_dest": {{"x": 0.71, "y": 0.21, "z": -0.01}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.39, "dy": 0.56, "dz": -0.73}}, "q5": {{"dx": 0.10, "dy": 0.21, "dz": -0.27}}, "q6": {{"x": "in_front", "y": "left", "z": "below"}}}}
+  {{"task_type": "pick_and_place", "q1": {{"x": 0.55, "y": 0.20, "z": -0.01}}, "q1_dest": {{"x": 0.71, "y": 0.21, "z": -0.01}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.39, "dy": 0.56, "dz": -0.73}}, "q5": {{"dx": 0.10, "dy": 0.21, "dz": -0.27}}, "q6": {{"x": "in_front", "y": "left", "z": "below"}}, "q7": {{"roll": 5.2, "pitch": -88.1, "yaw": 12.3}}, "q8": {{"roll": 0.0, "pitch": 0.5, "yaw": -30.1}}, "q9": {{"roll": -5.2, "pitch": 88.6, "yaw": -42.4}}, "q10": {{"object_a": "bowl_1_main", "object_b": "plate_1_main", "distance_m": 0.12}}, "q11": {{"openness": 0.85}}}}
 
   Or for example (articulation):
-  {{"task_type": "articulation", "q1": {{"x": 0.70, "y": -0.28, "z": 0.05}}, "q1_dest": {{"x": null, "y": null, "z": null}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.57, "dy": -0.82, "dz": 0.00}}, "q5": {{"dx": 0.25, "dy": -0.27, "dz": -0.21}}, "q6": {{"x": "in_front", "y": "right", "z": "below"}}}}
+  {{"task_type": "articulation", "q1": {{"x": 0.70, "y": -0.28, "z": 0.05}}, "q1_dest": {{"x": null, "y": null, "z": null}}, "q2": {{"x": 0.45, "y": -0.01, "z": 0.26}}, "q3": {{"can_close": "no"}}, "q4": {{"dx": 0.57, "dy": -0.82, "dz": 0.00}}, "q5": {{"dx": 0.25, "dy": -0.27, "dz": -0.21}}, "q6": {{"x": "in_front", "y": "right", "z": "below"}}, "q7": {{"roll": 3.0, "pitch": -90.0, "yaw": 45.0}}, "q8": {{"roll": 0.0, "pitch": 0.0, "yaw": 0.0}}, "q9": {{"roll": -3.0, "pitch": 90.0, "yaw": -45.0}}, "q10": {{"object_a": "cup_1_main", "object_b": "saucer_1_main", "distance_m": 0.08}}, "q11": {{"openness": 1.0}}}}

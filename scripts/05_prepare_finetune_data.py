@@ -128,6 +128,32 @@ def build_assistant_payload(dim: str, gt: dict, dec_m: int, dec_unit: int) -> di
         return {"q5": _dxdydz(gt["gripper_to_target_delta"], dec_m)}
     if dim == "q6":
         return {"q6": gt["gripper_to_target_relation"]}
+    if dim == "q7":
+        e = gt.get("eef_orientation_euler_deg")
+        if e is None:
+            return {"q7": None}
+        return {"q7": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
+    if dim == "q8":
+        e = gt.get("target_orientation_euler_deg")
+        if e is None:
+            return {"q8": None}
+        return {"q8": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
+    if dim == "q9":
+        e = gt.get("relative_rotation_euler_deg")
+        if e is None:
+            return {"q9": None}
+        return {"q9": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
+    if dim == "q10":
+        pd = gt.get("pairwise_distance")
+        if pd is None:
+            return {"q10": None}
+        return {"q10": {"object_a": pd["object_a"], "object_b": pd["object_b"],
+                        "distance_m": _r_m(pd["distance_m"], dec_m)}}
+    if dim == "q11":
+        openness = gt.get("gripper_openness")
+        if openness is None:
+            return {"q11": None}
+        return {"q11": {"openness": _r_m(openness, 2)}}
     raise ValueError(f"unknown dim {dim!r}")
 
 

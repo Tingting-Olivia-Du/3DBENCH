@@ -70,6 +70,13 @@ BLOCK_INDEX = {
     "pink_block": slice(18, 21),
 }
 
+# Indices into scene_obs for block euler angles (radians).
+BLOCK_EULER_INDEX = {
+    "red_block":  slice(9, 12),
+    "blue_block": slice(15, 18),
+    "pink_block": slice(21, 24),
+}
+
 # Indices into scene_obs for articulation joint scalars (informational; the
 # *positions* of the articulated objects live in ARTICULATED_POSITIONS).
 ARTICULATION_JOINT_IDX = {

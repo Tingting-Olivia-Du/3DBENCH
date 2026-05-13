@@ -6,6 +6,9 @@ Metrics per question:
   Q4 (next direction):   Mean cosine similarity, median cosine similarity
   Q5 (gripper→target offset): MAE per axis, MAE overall, RMSE overall (reuses position_metrics)
   Q6 (spatial relation):  Per-axis accuracy + macro-F1, overall (all-axes) accuracy
+  Q7 / Q8 / Q9 (orientation): Per-axis circular MAE (°), geodesic distance (°)
+  Q10 (pairwise distance): Scalar MAE, RMSE (m)
+  Q11 (gripper openness):  Scalar MAE, RMSE
 """
 from __future__ import annotations
 
@@ -161,6 +164,104 @@ def spatial_relation_metrics(
     }
 
 
+# ----- Angular / orientation metrics (Q7, Q8, Q9) ---------------------
+
+def _circular_distance_deg(a: float, b: float) -> float:
+    """Circular distance between two angles in degrees, handling ±180° wrap."""
+    diff = abs(a - b) % 360.0
+    return min(diff, 360.0 - diff)
+
+
+def geodesic_distance_deg(q1_wxyz: list[float], q2_wxyz: list[float]) -> float:
+    """Geodesic angular distance (degrees) between two unit quaternions [w,x,y,z].
+
+    Uses formula: angle = 2 * arccos(|q1 · q2|).
+    Handles q / -q sign ambiguity via absolute value of dot product.
+    """
+    q1 = np.array(q1_wxyz, dtype=float)
+    q2 = np.array(q2_wxyz, dtype=float)
+    # Normalize
+    q1 = q1 / (np.linalg.norm(q1) + 1e-12)
+    q2 = q2 / (np.linalg.norm(q2) + 1e-12)
+    dot = np.clip(abs(np.dot(q1, q2)), 0.0, 1.0)
+    return float(np.degrees(2.0 * np.arccos(dot)))
+
+
+def angular_metrics(
+    preds_euler: list[list[float]],
+    gts_euler: list[list[float]],
+    preds_quat: list[list[float]] | None = None,
+    gts_quat: list[list[float]] | None = None,
+) -> dict:
+    """Compute orientation error metrics.
+
+    Args:
+        preds_euler, gts_euler: lists of [roll, pitch, yaw] in degrees.
+        preds_quat, gts_quat:  optional lists of [w,x,y,z] for geodesic error.
+
+    Returns dict with mae_roll_deg, mae_pitch_deg, mae_yaw_deg,
+    mae_overall_deg, geodesic_mean_deg, geodesic_median_deg.
+    """
+    if not preds_euler:
+        return {
+            "n": 0,
+            "mae_roll_deg": None, "mae_pitch_deg": None, "mae_yaw_deg": None,
+            "mae_overall_deg": None,
+            "geodesic_mean_deg": None, "geodesic_median_deg": None,
+        }
+
+    # Per-axis circular MAE
+    roll_errs = [_circular_distance_deg(p[0], g[0]) for p, g in zip(preds_euler, gts_euler)]
+    pitch_errs = [_circular_distance_deg(p[1], g[1]) for p, g in zip(preds_euler, gts_euler)]
+    yaw_errs = [_circular_distance_deg(p[2], g[2]) for p, g in zip(preds_euler, gts_euler)]
+
+    mae_roll = float(np.mean(roll_errs))
+    mae_pitch = float(np.mean(pitch_errs))
+    mae_yaw = float(np.mean(yaw_errs))
+    mae_overall = float(np.mean([mae_roll, mae_pitch, mae_yaw]))
+
+    # Geodesic distance (requires quaternions)
+    geo_mean, geo_median = None, None
+    if preds_quat and gts_quat and len(preds_quat) == len(gts_quat):
+        geo_dists = [
+            geodesic_distance_deg(p, g)
+            for p, g in zip(preds_quat, gts_quat)
+        ]
+        geo_mean = float(np.mean(geo_dists))
+        geo_median = float(np.median(geo_dists))
+
+    return {
+        "n": len(preds_euler),
+        "mae_roll_deg": mae_roll,
+        "mae_pitch_deg": mae_pitch,
+        "mae_yaw_deg": mae_yaw,
+        "mae_overall_deg": mae_overall,
+        "geodesic_mean_deg": geo_mean,
+        "geodesic_median_deg": geo_median,
+    }
+
+
+# ----- Scalar metrics (Q10 distance, Q11 openness) --------------------
+
+def scalar_metrics(
+    preds: list[float],
+    gts: list[float],
+) -> dict:
+    """Metrics for a single scalar prediction (distance or openness).
+
+    Returns dict with n, mae, rmse.
+    """
+    if not preds:
+        return {"n": 0, "mae": None, "rmse": None}
+    p = np.array(preds, dtype=float)
+    g = np.array(gts, dtype=float)
+    return {
+        "n": len(preds),
+        "mae": float(np.abs(p - g).mean()),
+        "rmse": float(np.sqrt(((p - g) ** 2).mean())),
+    }
+
+
 # ----- Parse-rate helper -----------------------------------------------
 
 def parse_rate(parsed_list: list[bool | None], total: int) -> float:
@@ -188,14 +289,16 @@ def format_results_table(results: dict[str, dict]) -> str:
         }
     """
     lines = []
-    sep = "-" * 90
+    sep = "-" * 160
 
     lines.append(sep)
     lines.append(
         f"{'Model':<30}  {'Parse%':>7}  "
         f"{'Q1 MAE(m)':>10}  {'Q2 MAE(m)':>10}  "
         f"{'Q3 Acc':>8}  {'Q3 F1':>8}  "
-        f"{'Q4 CosSim':>10}  {'Q5 MAE(m)':>10}  {'Q6 AccAll':>10}"
+        f"{'Q4 CosSim':>10}  {'Q5 MAE(m)':>10}  {'Q6 AccAll':>10}  "
+        f"{'Q7 MAE(°)':>10}  {'Q8 MAE(°)':>10}  {'Q9 MAE(°)':>10}  "
+        f"{'Q10 MAE(m)':>11}  {'Q11 MAE':>8}"
     )
     lines.append(sep)
 
@@ -210,13 +313,20 @@ def format_results_table(results: dict[str, dict]) -> str:
         q4_cos  = m.get("q4", {}).get("mean_cosine_sim")
         q5_mae  = m.get("q5", {}).get("mae_overall")
         q6_acc  = m.get("q6", {}).get("acc_all")
+        q7_mae  = m.get("q7", {}).get("mae_overall_deg")
+        q8_mae  = m.get("q8", {}).get("mae_overall_deg")
+        q9_mae  = m.get("q9", {}).get("mae_overall_deg")
+        q10_mae = m.get("q10", {}).get("mae")
+        q11_mae = m.get("q11", {}).get("mae")
         parse   = m.get("parse_rate")
 
         lines.append(
             f"{model:<30}  {_f(parse, '.1%'):>7}  "
             f"{_f(q1_mae):>10}  {_f(q2_mae):>10}  "
             f"{_f(q3_acc):>8}  {_f(q3_f1):>8}  "
-            f"{_f(q4_cos):>10}  {_f(q5_mae):>10}  {_f(q6_acc):>10}"
+            f"{_f(q4_cos):>10}  {_f(q5_mae):>10}  {_f(q6_acc):>10}  "
+            f"{_f(q7_mae, '.1f'):>10}  {_f(q8_mae, '.1f'):>10}  {_f(q9_mae, '.1f'):>10}  "
+            f"{_f(q10_mae):>11}  {_f(q11_mae):>8}"
         )
 
     lines.append(sep)

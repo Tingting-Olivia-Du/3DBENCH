@@ -18,7 +18,7 @@ import yaml
 PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
 DEFAULT_TEMPLATE = PROMPTS_DIR / "spatial_qa_per_dim.yaml"
 
-VALID_DIMS = ("q1", "q2", "q3", "q4", "q5", "q6")
+VALID_DIMS = ("q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11")
 
 
 class PerDimPromptBuilder:

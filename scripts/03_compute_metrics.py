@@ -4,10 +4,18 @@
 Reads ground truth from ``data/gt/manifest.json`` and model responses from
 ``data/responses/<model>/``, then computes per-model, per-question metrics:
 
-  Q1 (target object position)  → MAE/RMSE per axis + overall
-  Q2 (gripper position)        → MAE/RMSE per axis + overall
-  Q3 (can gripper close)       → Accuracy, F1, positive rates
-  Q4 (next move direction)     → Mean & median cosine similarity
+  Q1  (target object position)   → MAE/RMSE per axis + overall
+  Q1d (destination position)     → MAE/RMSE per axis + overall
+  Q2  (gripper position)         → MAE/RMSE per axis + overall
+  Q3  (can gripper close)        → Accuracy, F1, positive rates
+  Q4  (next move direction)      → Mean & median cosine similarity
+  Q5  (gripper→target offset)    → MAE/RMSE per axis + overall
+  Q6  (spatial relation)         → Per-axis accuracy, macro-F1, all-axes accuracy
+  Q7  (EE orientation)           → Per-axis circular MAE (°), geodesic distance (°)
+  Q8  (target orientation)       → Per-axis circular MAE (°), geodesic distance (°)
+  Q9  (relative rotation)        → Per-axis circular MAE (°), geodesic distance (°)
+  Q10 (pairwise distance)        → Scalar MAE, RMSE (m)
+  Q11 (gripper openness)         → Scalar MAE, RMSE
 
 A full results JSON is saved to ``data/results.json``.
 
@@ -17,9 +25,10 @@ Usage
 
   # Custom paths
   python scripts/03_compute_metrics.py \
-      --manifest data/gt/manifest.json \
-      --responses_dir data/runs/20260416_213810 \
-      --out data/runs/20260416_213810/results-stat.json
+      --manifest data/gt-q11-libero-test/manifest.json \
+      --responses_dir rollout/libero-test-qwen-0512 \
+      --out results/libero-test-qwen-0512.json \
+      --report results/libero-test-qwen-0512-allq.md
 
 python scripts/03_compute_metrics.py \
     --responses_dir data/runs/20260425_051738 \
@@ -44,11 +53,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.metrics import (
+    _circular_distance_deg,
+    angular_metrics,
     classification_metrics,
     direction_metrics,
     format_results_table,
     parse_rate,
     position_metrics,
+    scalar_metrics,
     spatial_relation_metrics,
 )
 from bench.output_parser import ResponseParser
@@ -149,6 +161,17 @@ def evaluate_model(
     gt_q4, pred_q4 = [], []
     gt_q5, pred_q5 = [], []     # gripper-to-target offset vector
     gt_q6, pred_q6 = [], []     # spatial relation dicts
+    # Q7-Q9: orientation (euler + quaternion pairs)
+    gt_q7e, pred_q7e = [], []   # euler deg
+    gt_q7q, pred_q7q = [], []   # quaternion wxyz
+    gt_q8e, pred_q8e = [], []
+    gt_q8q, pred_q8q = [], []
+    gt_q9e, pred_q9e = [], []
+    gt_q9q, pred_q9q = [], []
+    # Q10: pairwise distance (scalar)
+    gt_q10, pred_q10 = [], []
+    # Q11: gripper openness (scalar)
+    gt_q11, pred_q11 = [], []
     task_type_correct = []      # task_type classification
 
     n_total = len(manifest)
@@ -232,6 +255,58 @@ def evaluate_model(
             gt_q6.append(gt_q6_val)
             pred_q6.append(pred_q6_val)
 
+        # ---- Q7: EE orientation ----
+        gt_q7e_val = _safe_list(gt.get("eef_orientation_euler_deg"))
+        pred_q7e_val = _safe_list(parsed.get("q7_eef_orientation_euler"))
+        if gt_q7e_val and pred_q7e_val:
+            gt_q7e.append(gt_q7e_val); pred_q7e.append(pred_q7e_val)
+            # Also collect quaternions for geodesic metric
+            gt_q7q_val = gt.get("eef_orientation_quat")
+            if gt_q7q_val:
+                gt_q7q.append(gt_q7q_val)
+                # VLM only returns euler; convert pred euler to quat for geodesic
+                from bench.gt_extractor import euler_deg_to_quat_wxyz
+                pred_q7q.append(euler_deg_to_quat_wxyz(pred_q7e_val))
+
+        # ---- Q8: Target object orientation ----
+        gt_q8e_val = _safe_list(gt.get("target_orientation_euler_deg"))
+        pred_q8e_val = _safe_list(parsed.get("q8_object_orientation_euler"))
+        if gt_q8e_val and pred_q8e_val:
+            gt_q8e.append(gt_q8e_val); pred_q8e.append(pred_q8e_val)
+            gt_q8q_val = gt.get("target_orientation_quat")
+            if gt_q8q_val:
+                gt_q8q.append(gt_q8q_val)
+                from bench.gt_extractor import euler_deg_to_quat_wxyz
+                pred_q8q.append(euler_deg_to_quat_wxyz(pred_q8e_val))
+
+        # ---- Q9: Relative rotation ----
+        gt_q9e_val = _safe_list(gt.get("relative_rotation_euler_deg"))
+        pred_q9e_val = _safe_list(parsed.get("q9_relative_rotation_euler"))
+        if gt_q9e_val and pred_q9e_val:
+            gt_q9e.append(gt_q9e_val); pred_q9e.append(pred_q9e_val)
+            gt_q9q_val = gt.get("relative_rotation_quat")
+            if gt_q9q_val:
+                gt_q9q.append(gt_q9q_val)
+                from bench.gt_extractor import euler_deg_to_quat_wxyz
+                pred_q9q.append(euler_deg_to_quat_wxyz(pred_q9e_val))
+
+        # ---- Q10: Pairwise distance ----
+        gt_q10_dict = gt.get("pairwise_distance")
+        pred_q10_dict = parsed.get("q10_pairwise_distance")
+        if isinstance(gt_q10_dict, dict) and isinstance(pred_q10_dict, dict):
+            gt_d = gt_q10_dict.get("distance_m")
+            pred_d = pred_q10_dict.get("distance_m")
+            if gt_d is not None and pred_d is not None:
+                gt_q10.append(float(gt_d))
+                pred_q10.append(float(pred_d))
+
+        # ---- Q11: Gripper openness ----
+        gt_q11_val = gt.get("gripper_openness")
+        pred_q11_val = parsed.get("q11_gripper_openness")
+        if gt_q11_val is not None and pred_q11_val is not None:
+            gt_q11.append(float(gt_q11_val))
+            pred_q11.append(float(pred_q11_val))
+
         # ---- per-sample error fields ----
         q1_err = (
             [round(abs(p - g), 4) for p, g in zip(pred_q1_val, gt_q1_val)]
@@ -264,6 +339,32 @@ def evaluate_model(
                 for ax in ("x", "y", "z")
             }
 
+        # Q7-Q9 per-sample circular error (degrees)
+        def _euler_err(gt_e, pred_e):
+            if gt_e and pred_e:
+                return [round(_circular_distance_deg(p, g), 2) for p, g in zip(pred_e, gt_e)]
+            return None
+
+        q7_err = _euler_err(gt_q7e_val, pred_q7e_val)
+        q8_err = _euler_err(gt_q8e_val, pred_q8e_val)
+        q9_err = _euler_err(gt_q9e_val, pred_q9e_val)
+
+        # Q10 per-sample scalar error
+        q10_err = None
+        if isinstance(gt_q10_dict, dict) and isinstance(pred_q10_dict, dict):
+            gt_d = gt_q10_dict.get("distance_m")
+            pred_d = pred_q10_dict.get("distance_m")
+            if gt_d is not None and pred_d is not None:
+                q10_err = round(abs(float(pred_d) - float(gt_d)), 4)
+
+        # Q11 per-sample scalar error
+        q11_err = None
+        if gt_q11_val is not None and pred_q11_val is not None:
+            q11_err = round(abs(float(pred_q11_val) - float(gt_q11_val)), 4)
+
+        def _round_list(v):
+            return [round(x, 4) for x in v] if v else None
+
         sample_records.append({
             "sample_id": sid,
             "task_id": record.get("task_id"),
@@ -276,18 +377,18 @@ def evaluate_model(
             "target_object": gt.get("target_object_name"),
             "dest_object": gt.get("dest_object_name"),
             "q1": {
-                "gt":   [round(v, 4) for v in gt_q1_val] if gt_q1_val else None,
-                "pred": [round(v, 4) for v in pred_q1_val] if pred_q1_val else None,
+                "gt":   _round_list(gt_q1_val),
+                "pred": _round_list(pred_q1_val),
                 "abs_err_xyz": q1_err,
             },
             "q1_dest": {
-                "gt":   [round(v, 4) for v in gt_q1d_val] if gt_q1d_val else None,
-                "pred": [round(v, 4) for v in pred_q1d_val] if pred_q1d_val else None,
+                "gt":   _round_list(gt_q1d_val),
+                "pred": _round_list(pred_q1d_val),
                 "abs_err_xyz": q1d_err,
             },
             "q2": {
-                "gt":   [round(v, 4) for v in gt_q2_val] if gt_q2_val else None,
-                "pred": [round(v, 4) for v in pred_q2_val] if pred_q2_val else None,
+                "gt":   _round_list(gt_q2_val),
+                "pred": _round_list(pred_q2_val),
                 "abs_err_xyz": q2_err,
             },
             "q3": {
@@ -295,19 +396,44 @@ def evaluate_model(
                 "pred": bool(pred_q3_val) if pred_q3_val is not None else None,
             },
             "q4": {
-                "gt":   [round(v, 4) for v in gt_q4_val] if gt_q4_val else None,
-                "pred": [round(v, 4) for v in pred_q4_val] if pred_q4_val else None,
+                "gt":   _round_list(gt_q4_val),
+                "pred": _round_list(pred_q4_val),
                 "cosine_sim": q4_cos,
             },
             "q5": {
-                "gt":   [round(v, 4) for v in gt_q5_val] if gt_q5_val else None,
-                "pred": [round(v, 4) for v in pred_q5_val] if pred_q5_val else None,
+                "gt":   _round_list(gt_q5_val),
+                "pred": _round_list(pred_q5_val),
                 "abs_err_xyz": q5_err,
             },
             "q6": {
                 "gt":   gt_q6_val,
                 "pred": pred_q6_val if isinstance(pred_q6_val, dict) else None,
                 "correct": q6_correct,
+            },
+            "q7": {
+                "gt":   _round_list(gt_q7e_val),
+                "pred": _round_list(pred_q7e_val),
+                "err_deg": q7_err,
+            },
+            "q8": {
+                "gt":   _round_list(gt_q8e_val),
+                "pred": _round_list(pred_q8e_val),
+                "err_deg": q8_err,
+            },
+            "q9": {
+                "gt":   _round_list(gt_q9e_val),
+                "pred": _round_list(pred_q9e_val),
+                "err_deg": q9_err,
+            },
+            "q10": {
+                "gt":   gt_q10_dict,
+                "pred": pred_q10_dict,
+                "abs_err": q10_err,
+            },
+            "q11": {
+                "gt":   float(gt_q11_val) if gt_q11_val is not None else None,
+                "pred": float(pred_q11_val) if pred_q11_val is not None else None,
+                "abs_err": q11_err,
             },
         })
 
@@ -344,6 +470,26 @@ def evaluate_model(
         "q6": {
             **spatial_relation_metrics(pred_q6, gt_q6),
             "parse_rate": len(pred_q6) / n_response if n_response > 0 else 0.0,
+        },
+        "q7": {
+            **angular_metrics(pred_q7e, gt_q7e, pred_q7q if pred_q7q else None, gt_q7q if gt_q7q else None),
+            "parse_rate": len(pred_q7e) / n_response if n_response > 0 else 0.0,
+        },
+        "q8": {
+            **angular_metrics(pred_q8e, gt_q8e, pred_q8q if pred_q8q else None, gt_q8q if gt_q8q else None),
+            "parse_rate": len(pred_q8e) / n_response if n_response > 0 else 0.0,
+        },
+        "q9": {
+            **angular_metrics(pred_q9e, gt_q9e, pred_q9q if pred_q9q else None, gt_q9q if gt_q9q else None),
+            "parse_rate": len(pred_q9e) / n_response if n_response > 0 else 0.0,
+        },
+        "q10": {
+            **scalar_metrics(pred_q10, gt_q10),
+            "parse_rate": len(pred_q10) / n_response if n_response > 0 else 0.0,
+        },
+        "q11": {
+            **scalar_metrics(pred_q11, gt_q11),
+            "parse_rate": len(pred_q11) / n_response if n_response > 0 else 0.0,
         },
         "samples": sample_records,
     }
@@ -549,11 +695,32 @@ def write_markdown_report(
     if suite:
         lines.append(f"**Suite:** `{suite}`  |  **Samples:** {len(manifest)}\n")
 
+    # --- Dimension legend ---
+    lines.append("### Dimension Legend\n")
+    lines.append("| Dimension | Description | Metric | Unit |")
+    lines.append("| --- | --- | --- | --- |")
+    lines.append("| Q1 | Source/target object 3D position | MAE per axis + overall | meters |")
+    lines.append("| Q1_dest | Destination position (pick-and-place tasks) | MAE per axis + overall | meters |")
+    lines.append("| Q2 | Gripper (end-effector) 3D position | MAE per axis + overall | meters |")
+    lines.append("| Q3 | Can gripper close on the target? (binary) | Accuracy, F1 | — |")
+    lines.append("| Q4 | Next-move direction (unit vector EE→target) | Cosine similarity | [-1, 1] |")
+    lines.append("| Q5 | Gripper-to-target offset vector (dx, dy, dz) | MAE per axis + overall | meters |")
+    lines.append("| Q6 | Spatial relation (per-axis language label) | Per-axis accuracy, F1 | — |")
+    lines.append("| Q7 | End-effector orientation (roll, pitch, yaw) | Circular MAE, geodesic | degrees |")
+    lines.append("| Q8 | Target object orientation (roll, pitch, yaw) | Circular MAE, geodesic | degrees |")
+    lines.append("| Q9 | Relative rotation EE→target (roll, pitch, yaw) | Circular MAE, geodesic | degrees |")
+    lines.append("| Q10 | Pairwise distance between two objects | Scalar MAE, RMSE | meters |")
+    lines.append("| Q11 | Gripper openness [0=closed, 1=fully open] | Scalar MAE, RMSE | [0, 1] |")
+    lines.append("")
+
     # --- Summary table ---
     lines.append("### Summary\n")
-    hdrs = ["Model", "Run", "Parse %", "Q1 MAE (m)", "Q1_dest MAE (m)",
+    hdrs = ["Model", "Run", "Parse %", "Q1 MAE (m)", "Q1d MAE (m)",
             "Q2 MAE (m)", "Q3 Acc", "Q3 F1", "Q4 CosSim",
-            "Q5 MAE (m)", "Q6 AccAll", "TaskType Acc"]
+            "Q5 MAE (m)", "Q6 AccAll",
+            "Q7 MAE (°)", "Q8 MAE (°)", "Q9 MAE (°)",
+            "Q10 MAE (m)", "Q11 MAE",
+            "TaskType Acc"]
     rows = []
     for slug, m in display.items():
         rows.append([
@@ -568,17 +735,20 @@ def write_markdown_report(
             _f(m.get("q4", {}).get("mean_cosine_sim")),
             _f(m.get("q5", {}).get("mae_overall")),
             _f(m.get("q6", {}).get("acc_all")),
+            _f(m.get("q7", {}).get("mae_overall_deg"), ".1f"),
+            _f(m.get("q8", {}).get("mae_overall_deg"), ".1f"),
+            _f(m.get("q9", {}).get("mae_overall_deg"), ".1f"),
+            _f(m.get("q10", {}).get("mae")),
+            _f(m.get("q11", {}).get("mae")),
             _p(m.get("task_type_accuracy")) if m.get("task_type_accuracy") is not None else "—",
         ])
-    # Highlight best/second-best across models in the summary table
-    #   cols: 2=Parse%(higher), 3=Q1 MAE(lower), 4=Q1d MAE(lower),
-    #         5=Q2 MAE(lower), 6=Q3 Acc(higher), 7=Q3 F1(higher),
-    #         8=Q4 CosSim(higher), 9=Q5 MAE(lower), 10=Q6 AccAll(higher),
-    #         11=TaskType Acc(higher)
     rows = _highlight_best(rows, {
         2: "higher", 3: "lower", 4: "lower", 5: "lower",
         6: "higher", 7: "higher", 8: "higher", 9: "lower",
-        10: "higher", 11: "higher",
+        10: "higher",
+        11: "lower", 12: "lower", 13: "lower",
+        14: "lower", 15: "lower",
+        16: "higher",
     })
     lines.append(_md_table(hdrs, rows))
     lines.append("")
@@ -643,6 +813,50 @@ def write_markdown_report(
     lines.append(_md_table(hdrs6, rows6))
     lines.append("")
 
+    # --- Q7/Q8/Q9 Orientation detail ---
+    lines.append("### Q7/Q8/Q9 — Orientation (degrees)\n")
+    hdrs789 = ["Model", "Q", "MAE Roll", "MAE Pitch", "MAE Yaw", "MAE Overall",
+               "Geodesic Mean", "Geodesic Median", "n"]
+    rows789 = []
+    for q_key, label in (("q7", "Q7 EE"), ("q8", "Q8 Target"), ("q9", "Q9 Relative")):
+        group = []
+        for slug, m in display.items():
+            qm = m.get(q_key, {})
+            group.append([
+                f"`{slug}`", label,
+                _f(qm.get("mae_roll_deg"), ".1f"),
+                _f(qm.get("mae_pitch_deg"), ".1f"),
+                _f(qm.get("mae_yaw_deg"), ".1f"),
+                _f(qm.get("mae_overall_deg"), ".1f"),
+                _f(qm.get("geodesic_mean_deg"), ".1f"),
+                _f(qm.get("geodesic_median_deg"), ".1f"),
+                str(qm.get("n", 0)),
+            ])
+        group = _highlight_best(group, {
+            2: "lower", 3: "lower", 4: "lower", 5: "lower", 6: "lower", 7: "lower",
+        })
+        rows789.extend(group)
+    lines.append(_md_table(hdrs789, rows789))
+    lines.append("")
+
+    # --- Q10/Q11 Scalar detail ---
+    lines.append("### Q10/Q11 — Scalar Metrics\n")
+    hdrs_sc = ["Model", "Q", "MAE", "RMSE", "n"]
+    rows_sc = []
+    for q_key, label in (("q10", "Q10 Pairwise Dist (m)"), ("q11", "Q11 Openness")):
+        group = []
+        for slug, m in display.items():
+            qm = m.get(q_key, {})
+            group.append([
+                f"`{slug}`", label,
+                _f(qm.get("mae")), _f(qm.get("rmse")),
+                str(qm.get("n", 0)),
+            ])
+        group = _highlight_best(group, {2: "lower", 3: "lower"})
+        rows_sc.extend(group)
+    lines.append(_md_table(hdrs_sc, rows_sc))
+    lines.append("")
+
     # --- Full per-sample comparison (all models) ---
     def _xyz(d, key):
         v = d.get(key) if d else None
@@ -673,13 +887,18 @@ def write_markdown_report(
         lines.append(f"### Per-Sample Detail  (`{slug}`, {len(samples)} samples)\n")
         hdrs4 = [
             "ID", "Task", "Target Obj",
-            "Q1 src gt", "Q1 src pred", "Q1 src MAE (xyz → overall)",
-            "Q1 dst gt", "Q1 dst pred", "Q1 dst MAE (xyz → overall)",
-            "Q2 gt", "Q2 pred", "Q2 MAE (xyz → overall)",
+            "Q1 src gt", "Q1 src pred", "Q1 src MAE",
+            "Q1 dst gt", "Q1 dst pred", "Q1 dst MAE",
+            "Q2 gt", "Q2 pred", "Q2 MAE",
             "Q3 gt", "Q3 pred",
             "Q4 gt", "Q4 pred", "Q4 CosSim",
-            "Q5 gt", "Q5 pred", "Q5 MAE (xyz → overall)",
-            "Q6 gt", "Q6 pred", "Q6 correct (xyz)",
+            "Q5 gt", "Q5 pred", "Q5 MAE",
+            "Q6 gt", "Q6 pred", "Q6 correct",
+            "Q7 gt", "Q7 pred", "Q7 err (°)",
+            "Q8 gt", "Q8 pred", "Q8 err (°)",
+            "Q9 gt", "Q9 pred", "Q9 err (°)",
+            "Q10 gt", "Q10 pred", "Q10 err",
+            "Q11 gt", "Q11 pred", "Q11 err",
         ]
 
         def _relation(d, key):
@@ -698,9 +917,28 @@ def write_markdown_report(
                 )
             return "—"
 
+        def _euler_fmt(d, key):
+            v = d.get(key) if d else None
+            if isinstance(v, list) and len(v) == 3:
+                return f"`[{v[0]:.1f}, {v[1]:.1f}, {v[2]:.1f}]`"
+            return "—"
+
+        def _scalar_fmt(v):
+            if v is None:
+                return "—"
+            return f"`{v:.4f}`"
+
+        def _q10_fmt(d, key):
+            v = d.get(key) if d else None
+            if isinstance(v, dict) and v.get("distance_m") is not None:
+                return f"`{float(v['distance_m']):.4f}`"
+            return "—"
+
         rows4 = []
         for s in samples:
             q3 = s.get("q3", {})
+            q10 = s.get("q10", {})
+            q11 = s.get("q11", {})
             rows4.append([
                 str(s["sample_id"]),
                 s["task_description"][:50] + ("…" if len(s["task_description"]) > 50 else ""),
@@ -725,6 +963,21 @@ def write_markdown_report(
                 _relation(s.get("q6", {}), "gt"),
                 _relation(s.get("q6", {}), "pred"),
                 _q6_correct(s.get("q6", {})),
+                _euler_fmt(s.get("q7", {}), "gt"),
+                _euler_fmt(s.get("q7", {}), "pred"),
+                _euler_fmt(s.get("q7", {}), "err_deg"),
+                _euler_fmt(s.get("q8", {}), "gt"),
+                _euler_fmt(s.get("q8", {}), "pred"),
+                _euler_fmt(s.get("q8", {}), "err_deg"),
+                _euler_fmt(s.get("q9", {}), "gt"),
+                _euler_fmt(s.get("q9", {}), "pred"),
+                _euler_fmt(s.get("q9", {}), "err_deg"),
+                _q10_fmt(q10, "gt"),
+                _q10_fmt(q10, "pred"),
+                _scalar_fmt(q10.get("abs_err")),
+                _scalar_fmt(q11.get("gt")),
+                _scalar_fmt(q11.get("pred")),
+                _scalar_fmt(q11.get("abs_err")),
             ])
         lines.append(_md_table(hdrs4, rows4))
         lines.append("")
@@ -859,6 +1112,9 @@ def main() -> None:
     print("  Q4 CosSim   : range [-1,1]; random ~0.0; perfect=1.0")
     print("  Q5 MAE (m)  : gripper-to-target offset error; lower = better")
     print("  Q6 AccAll   : fraction of samples where all 3 axes are correctly labeled")
+    print("  Q7/Q8/Q9 (°): orientation error in degrees; lower = better")
+    print("  Q10 MAE (m) : pairwise object distance error; lower = better")
+    print("  Q11 MAE     : gripper openness error [0,1]; lower = better")
     print("  Parse rate  : fraction of responses parseable as valid JSON")
     print(f"\n  Per-sample comparisons: data/comparison_<model>.json")
 

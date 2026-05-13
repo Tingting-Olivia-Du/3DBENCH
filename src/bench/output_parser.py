@@ -7,7 +7,12 @@ Expected VLM output (single JSON object):
     "q3": {"can_close": "yes"|"no"},               # gripper close label
     "q4": {"dx": float, "dy": float, "dz": float}, # next move direction (unit vector)
     "q5": {"dx": float, "dy": float, "dz": float}, # gripper→target offset (not normalized)
-    "q6": {"x": str, "y": str, "z": str}           # axis-wise spatial relation labels
+    "q6": {"x": str, "y": str, "z": str},          # axis-wise spatial relation labels
+    "q7": {"roll": float, "pitch": float, "yaw": float},  # EE orientation (degrees)
+    "q8": {"roll": float, "pitch": float, "yaw": float},  # target orientation (degrees)
+    "q9": {"roll": float, "pitch": float, "yaw": float},  # relative rotation (degrees)
+    "q10": {"object_a": str, "object_b": str, "distance_m": float},  # pairwise distance
+    "q11": {"openness": float}                     # gripper openness [0,1]
   }
 
 The parser is lenient: it tolerates markdown code fences, alternative key
@@ -160,6 +165,57 @@ def _parse_spatial_relation(data: Any) -> dict[str, str] | None:
     return {"x": x_label, "y": y_label, "z": z_label}
 
 
+def _parse_euler(data: Any) -> list[float] | None:
+    """Parse {"roll": float, "pitch": float, "yaw": float} → [roll, pitch, yaw] degrees."""
+    if not isinstance(data, dict):
+        return None
+    try:
+        return [float(data["roll"]), float(data["pitch"]), float(data["yaw"])]
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _parse_pairwise_distance(data: Any) -> dict | None:
+    """Parse {"object_a": str, "object_b": str, "distance_m": float}."""
+    if not isinstance(data, dict):
+        return None
+    try:
+        return {
+            "object_a": str(data["object_a"]),
+            "object_b": str(data["object_b"]),
+            "distance_m": float(data["distance_m"]),
+        }
+    except (KeyError, TypeError, ValueError):
+        # Also try alternative key names
+        try:
+            dist = data.get("distance_m") or data.get("distance") or data.get("dist")
+            obj_a = data.get("object_a") or data.get("obj_a")
+            obj_b = data.get("object_b") or data.get("obj_b")
+            if dist is not None and obj_a and obj_b:
+                return {
+                    "object_a": str(obj_a),
+                    "object_b": str(obj_b),
+                    "distance_m": float(dist),
+                }
+        except (TypeError, ValueError):
+            pass
+        return None
+
+
+def _parse_openness(data: Any) -> float | None:
+    """Parse {"openness": float} → float in [0, 1]."""
+    if isinstance(data, dict):
+        val = data.get("openness")
+    elif isinstance(data, (int, float)):
+        val = data
+    else:
+        return None
+    try:
+        return float(np.clip(float(val), 0.0, 1.0))
+    except (TypeError, ValueError):
+        return None
+
+
 # ----- Top-level resolver ----------------------------------------------
 
 def _resolve_subfield(top: dict, primary_key: str, alt_keys: tuple[str, ...]) -> Any:
@@ -178,14 +234,19 @@ class ResponseParser:
     def parse(self, response_text: str) -> dict:
         """Return a dict with keys:
 
-        raw                  – original response string
-        parsed_ok            – bool, True if at least one field was successfully parsed
-        q1_object_pos        – [x, y, z] or None
-        q2_gripper_pos       – [x, y, z] or None
-        q3_can_close         – bool or None
-        q4_next_dir          – [dx, dy, dz] (unit vector) or None
-        q5_gripper_to_target – [dx, dy, dz] (raw offset, not normalized) or None
-        q6_spatial_relation  – {"x": str, "y": str, "z": str} or None
+        raw                           – original response string
+        parsed_ok                     – bool, True if at least one field was successfully parsed
+        q1_object_pos                 – [x, y, z] or None
+        q2_gripper_pos                – [x, y, z] or None
+        q3_can_close                  – bool or None
+        q4_next_dir                   – [dx, dy, dz] (unit vector) or None
+        q5_gripper_to_target          – [dx, dy, dz] (raw offset, not normalized) or None
+        q6_spatial_relation           – {"x": str, "y": str, "z": str} or None
+        q7_eef_orientation_euler      – [roll, pitch, yaw] degrees or None
+        q8_object_orientation_euler   – [roll, pitch, yaw] degrees or None
+        q9_relative_rotation_euler    – [roll, pitch, yaw] degrees or None
+        q10_pairwise_distance         – {"object_a", "object_b", "distance_m"} or None
+        q11_gripper_openness          – float in [0,1] or None
         """
         result: dict = {
             "raw": response_text,
@@ -198,6 +259,11 @@ class ResponseParser:
             "q4_next_dir": None,
             "q5_gripper_to_target": None,
             "q6_spatial_relation": None,
+            "q7_eef_orientation_euler": None,
+            "q8_object_orientation_euler": None,
+            "q9_relative_rotation_euler": None,
+            "q10_pairwise_distance": None,
+            "q11_gripper_openness": None,
         }
 
         data = _extract_json_from_text(response_text)
@@ -247,8 +313,30 @@ class ResponseParser:
         q6_raw = _resolve_subfield(data, "q6", ("spatial_relation", "relation", "spatial_relationship"))
         result["q6_spatial_relation"] = _parse_spatial_relation(q6_raw)
 
+        # Q7 – EE orientation (euler degrees)
+        q7_raw = _resolve_subfield(data, "q7", ("eef_orientation", "gripper_orientation", "ee_orientation"))
+        result["q7_eef_orientation_euler"] = _parse_euler(q7_raw)
+
+        # Q8 – target object orientation (euler degrees)
+        q8_raw = _resolve_subfield(data, "q8", ("object_orientation", "target_orientation"))
+        result["q8_object_orientation_euler"] = _parse_euler(q8_raw)
+
+        # Q9 – relative rotation (euler degrees)
+        q9_raw = _resolve_subfield(data, "q9", ("relative_rotation", "rotation_delta"))
+        result["q9_relative_rotation_euler"] = _parse_euler(q9_raw)
+
+        # Q10 – pairwise distance
+        q10_raw = _resolve_subfield(data, "q10", ("pairwise_distance", "object_distance"))
+        result["q10_pairwise_distance"] = _parse_pairwise_distance(q10_raw)
+
+        # Q11 – gripper openness
+        q11_raw = _resolve_subfield(data, "q11", ("gripper_openness", "openness"))
+        result["q11_gripper_openness"] = _parse_openness(q11_raw)
+
         result["parsed_ok"] = any(
             result[k] is not None
-            for k in ("q1_object_pos", "q2_gripper_pos", "q3_can_close", "q4_next_dir")
+            for k in ("q1_object_pos", "q2_gripper_pos", "q3_can_close", "q4_next_dir",
+                       "q7_eef_orientation_euler", "q8_object_orientation_euler",
+                       "q10_pairwise_distance", "q11_gripper_openness")
         )
         return result

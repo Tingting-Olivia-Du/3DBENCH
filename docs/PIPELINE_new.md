@@ -3,7 +3,8 @@
 整个研究流程分 6 个阶段。每阶段给出**完整调用命令**、**预期输出**与**前置条件**。所有命令默认在仓库根目录 `/umd-datapool/tingting/3DBENCH` 下执行；激活环境：
 
 ```bash
-conda activate /umd-datapool/tingting/envs/vlmbench
+cd 3DBENCH
+conda activate /workspace/tingting/envs/vlmbench
 ```
 
 ---

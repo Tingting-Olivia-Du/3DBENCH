@@ -30,11 +30,10 @@ shared_frame_block: |
          Y- points TOWARD the robot.
       Z+ is up.
   - Q6 axis labels (bound to world-axis SIGNS, not camera/image directions):
-      X+ → "in_front"   |   Y+ → "left"   |   Z+ → "above"
-    "left" = world Y+ = side opposite the robot base. NOT the side a person
-    standing behind the robot would call left.
+      X+ → "in_front"   |   Y+ → "right"   |   Z+ → "above"
+    "right" = world Y+ = side away from the robot base.
   - Static-camera visual mapping: world X+ projects to image upper-right;
-    world Y+ ("left") projects to image-RIGHT (NOT image-left); world Z+
+    world Y+ ("right") projects to image-RIGHT; world Z+
     projects to image up. World X+ and Y+ are hard to distinguish in the
     static view alone — use the wrist view to disambiguate.
 
@@ -184,7 +183,7 @@ q5:
 
     Q5 — GRIPPER-TO-TARGET OFFSET (world frame, meters):
     Compute target_position − gripper_position. Positive dx = target is
-    further along world X+ ("in_front"); positive dy = world Y+ ("left");
+    further along world X+ ("in_front"); positive dy = world Y+ ("right");
     positive dz = world Z+ ("above").
 
     Output format:
@@ -217,8 +216,150 @@ q6:
     Describe where the TARGET OBJECT is relative to the GRIPPER on each
     world axis (NOT image directions):
     - X-axis: "in_front" (target_x > gripper_x) | "behind" (target_x < gripper_x) | "aligned_x"
-    - Y-axis: "left"     (target_y > gripper_y) | "right"  (target_y < gripper_y) | "aligned_y"
+    - Y-axis: "right"    (target_y > gripper_y) | "left"   (target_y < gripper_y) | "aligned_y"
     - Z-axis: "above"    (target_z > gripper_z) | "below"  (target_z < gripper_z) | "aligned_z"
 
     Output format:
       {{"q6": {{"x": <x-label>, "y": <y-label>, "z": <z-label>}}}}
+
+# ---------------------------------------------------------------------------
+# Q7: end-effector orientation (euler angles in degrees)
+# ---------------------------------------------------------------------------
+q7:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation on the
+    CALVIN play-table benchmark.
+    {shared_view_note}
+
+    ORIENTATION CONVENTION:
+    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
+    - Roll: rotation about the X-axis. Pitch: rotation about the Y-axis.
+      Yaw: rotation about the Z-axis.
+    - Range: -180 to +180 degrees per axis.
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q7".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q7 — END-EFFECTOR ORIENTATION (world frame):
+    What is the current orientation of the robot's end-effector (gripper)?
+    Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ
+    intrinsic convention in the CALVIN world frame.
+
+    Output format:
+      {{"q7": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
+
+# ---------------------------------------------------------------------------
+# Q8: target object orientation (euler angles in degrees)
+# ---------------------------------------------------------------------------
+q8:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation on the
+    CALVIN play-table benchmark.
+    {shared_view_note}
+
+    ORIENTATION CONVENTION:
+    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
+    - Range: -180 to +180 degrees per axis.
+    - Blocks sitting flat on the table have roll ≈ 0, pitch ≈ 0.
+    - Articulated objects (slider, drawer, etc.) have fixed orientations.
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q8".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q8 — TARGET OBJECT ORIENTATION (world frame):
+    What is the current orientation of the TARGET OBJECT (the object to be
+    manipulated)? Report as Euler angles (roll, pitch, yaw) in DEGREES
+    using the XYZ intrinsic convention.
+
+    Output format:
+      {{"q8": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
+
+# ---------------------------------------------------------------------------
+# Q9: relative rotation from EE to target object
+# ---------------------------------------------------------------------------
+q9:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation on the
+    CALVIN play-table benchmark.
+    {shared_view_note}
+
+    ORIENTATION CONVENTION:
+    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
+    - Range: -180 to +180 degrees per axis.
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q9".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q9 — RELATIVE ROTATION (EE → TARGET):
+    What rotation must the end-effector undergo to align its orientation
+    with the target object? Report as Euler angles (roll, pitch, yaw) in
+    DEGREES using the XYZ intrinsic convention.
+
+    Output format:
+      {{"q9": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
+
+# ---------------------------------------------------------------------------
+# Q10: pairwise inter-object distance
+# ---------------------------------------------------------------------------
+q10:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation on the
+    CALVIN play-table benchmark.
+    {shared_view_note}
+    {shared_frame_block}
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q10".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q10 — PAIRWISE OBJECT DISTANCE (world frame):
+    Consider ALL visible objects in the scene EXCEPT the target object
+    and its destination (if any). Among these remaining objects, find the
+    two that are CLOSEST to each other and report:
+    1. Their names.
+    2. The Euclidean distance between their centers in meters.
+
+    Output format:
+      {{"q10": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}}}
+
+# ---------------------------------------------------------------------------
+# Q11: gripper openness (continuous)
+# ---------------------------------------------------------------------------
+q11:
+  system: |
+    You are an expert in 3D spatial reasoning for robot manipulation on the
+    CALVIN play-table benchmark.
+    {shared_view_note}
+
+    The Franka Panda gripper has two parallel finger jaws. When fully open,
+    the gap is at its maximum (~8 cm). When fully closed, the fingers touch.
+
+    OUTPUT FORMAT:
+    Respond with EXACTLY one JSON object containing only the key "q11".
+    No prose, no markdown, no code fences.
+
+  user: |
+    Task description: "{task_description}"
+
+    Q11 — GRIPPER OPENNESS:
+    How open is the robot gripper right now? Report a single value between
+    0.0 (fingers fully closed / touching) and 1.0 (fingers fully open).
+    Use the wrist view for a close-up look at the finger gap.
+
+    Output format:
+      {{"q11": {{"openness": <float_0_to_1>}}}}

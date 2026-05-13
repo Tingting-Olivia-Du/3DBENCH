@@ -28,10 +28,39 @@ Usage
   python scripts/02_run_vlm_eval.py --models qwen2.5-vl-7b
 
   # Override paths
-  python scripts/02_run_vlm_eval.py \
-      --manifest data/gt/manifest.json \
-      --out_dir  data/responses-0415 \
-      --device   cuda:0
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-q11-libero-test/manifest.json \
+    --models qwen2.5-vl-3b \
+    --out_dir  rollout/libero-test-qwen-0512 \
+    --prompt_yaml prompts/spatial_qa.yaml \
+    --device   cuda:3
+
+
+# 只跑 libero_spatial 的 task 0-2, init_state 0 和 5
+
+
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-q11-libero-test/manifest.json \
+    --out_dir rollout/libero-test-qwen-0512 \
+    --prompt_yaml prompts/spatial_qa.yaml \
+    --device cuda:3 \
+    --task_ids 0 1 2 \
+    --state_indices 1 6
+
+# 只跑 libero_spatial 和 libero_object, 最多100个样本
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-q11-libero-test/manifest.json \
+    --models qwen2.5-vl-3b \
+    --out_dir rollout/libero-test-qwen-0512 \
+    --prompt_yaml prompts/spatial_qa.yaml \
+    --device cuda:3 \
+    --suites libero_10 libero_object \
+    --max_samples 100
+
+
+
+
+
 """
 from __future__ import annotations
 
@@ -63,14 +92,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--manifest", default="data/gt/manifest.json",
                    help="Path to GT manifest from 01_extract_gt.py (default: data/gt/manifest.json)")
-    p.add_argument("--out_dir",  default="data/responses",
+    p.add_argument("--out_dir",  default="rollout",
                    help="Output directory for model responses (default: data/responses)")
     p.add_argument("--models",   nargs="+",
                    default=["qwen2.5-vl-3b", "qwen2.5-vl-7b",
-                            "qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b", "qwen3-vl-30b-a3b",
-                            "paligemma-1", "paligemma-2", "kosmos-2",
-                            "internvl2-8b", "random"],
-                   help="Models to evaluate (default: all three)")
+                            "qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b", "random"],
+                   help="Models to evaluate (default: all qwen)")
     p.add_argument("--device",   default="cuda",
                    help="Torch device (default: cuda)")
     p.add_argument("--max_new_tokens", type=int, default=512)
@@ -89,6 +116,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--prompt_yaml", default=None,
                    help="Override the prompt YAML used by base PromptBuilder. "
                         "Useful for evaluating on CALVIN with prompts/spatial_qa_calvin.yaml.")
+    # ── Manifest filtering (run a subset of samples) ─────────────────────
+    p.add_argument("--suites", nargs="+", default=["all"],
+                   help="Only run these suites, or 'all' for no filtering (default: all)")
+    p.add_argument("--task_ids", nargs="+", type=int, default=None,
+                   help="Only run these task IDs (e.g. --task_ids 0 1 2)")
+    p.add_argument("--state_indices", nargs="+", type=int, default=None,
+                   help="Only run these init_state_idx values (e.g. --state_indices 0 5 10)")
+    p.add_argument("--frame_types", nargs="+", default=None,
+                   help="Only run these frame types (e.g. --frame_types init traj)")
+    p.add_argument("--max_samples", type=int, default=None,
+                   help="Cap the total number of samples to run")
     return p.parse_args()
 
 
@@ -646,6 +684,13 @@ class RandomBaseline(VLMBase):
             "z": self._rng.choice(self._Z_LABELS),
         }
 
+    def _rand_euler(self) -> dict:
+        return {
+            "roll": float(self._rng.uniform(-180, 180)),
+            "pitch": float(self._rng.uniform(-180, 180)),
+            "yaw": float(self._rng.uniform(-180, 180)),
+        }
+
     def generate(
         self,
         image_paths: dict,
@@ -662,6 +707,12 @@ class RandomBaseline(VLMBase):
             "q4": self._rand_unit_vec(),
             "q5": self._rand_delta(),
             "q6": self._rand_relation(),
+            "q7": self._rand_euler(),
+            "q8": self._rand_euler(),
+            "q9": self._rand_euler(),
+            "q10": {"object_a": "obj_a", "object_b": "obj_b",
+                    "distance_m": float(self._rng.uniform(0.01, 0.50))},
+            "q11": {"openness": float(self._rng.uniform(0.0, 1.0))},
         }
         return json.dumps(response)
 
@@ -913,6 +964,19 @@ def main() -> None:
     # image_path in manifest is always relative to the repo's data/ directory
     data_root = Path(__file__).resolve().parent.parent / "data"
     print(f"Loaded {len(manifest)} samples from {manifest_path}")
+
+    # ── Filter manifest based on CLI flags ───────────────────────────────
+    if args.suites and "all" not in args.suites:
+        manifest = [r for r in manifest if r.get("suite") in args.suites]
+    if args.task_ids is not None:
+        manifest = [r for r in manifest if r.get("task_id") in args.task_ids]
+    if args.state_indices is not None:
+        manifest = [r for r in manifest if r.get("init_state_idx") in args.state_indices]
+    if args.frame_types:
+        manifest = [r for r in manifest if r.get("frame_type") in args.frame_types]
+    if args.max_samples is not None:
+        manifest = manifest[:args.max_samples]
+    print(f"After filtering: {len(manifest)} samples")
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

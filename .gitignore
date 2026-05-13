@@ -6,12 +6,9 @@ __pycache__/
 .env
 *.log
 
-data/gt-q6/
-data/runs/
-data/runs-mv-base-calvin/
-data/runs-mv-lora-calvin/
-data/runs-mv-lora-libero-new/
-data/runs-mv-base-libero/
-data/gt-q6-mv-mini/
+data/
+rollout/
+rollouts/
+results/
 lerobot/
 models/
