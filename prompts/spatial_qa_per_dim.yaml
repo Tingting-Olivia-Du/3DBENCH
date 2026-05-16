@@ -6,35 +6,88 @@
 #   - scripts/06_finetune_qwen.py          (load prompt for SFT)
 #   - scripts/02_run_vlm_eval.py + PerDimPromptBuilder (run LoRA-augmented eval)
 #
-# Coordinate frame definition (same as spatial_qa.yaml):
-#   Origin : robot arm base center (mounted on the workspace table)
-#   X-axis : forward direction (positive = further from robot)
-#   Y-axis : robot's RIGHT direction (positive = to the robot's right)
-#   Z-axis : upward (positive = higher); units in meters.
+# Question text is kept IDENTICAL to spatial_qa.yaml so that zero-shot and
+# fine-tuned models see exactly the same wording.
 
-# Dual-view note shared across all dimensions.
+# Dual-view note shared across all dimensions (identical to spatial_qa.yaml system).
 shared_view_note: |
-  You will receive TWO images of the same workspace at the same instant:
-    - AGENT VIEW: third-person camera framing the entire workspace.
-    - WRIST VIEW: first-person camera mounted on the gripper.
-  Use both — agent view for global geometry/scale, wrist view for proximity
-  and gripper-relative occlusions.
+  You will be given TWO images of the same workspace at the same instant and a task description:
+    - AGENT VIEW: a third-person camera that frames the entire workspace (table, robot, all objects).
+    - WRIST VIEW: a first-person camera mounted on the gripper, which closes in on whatever the
+      gripper is currently pointed at; objects appear larger and the gripper itself may occupy the
+      foreground.
+  Use both views together — the agent view is best for global geometry and scale, while the wrist
+  view is best for resolving how close the gripper is to a target and detecting occlusions.
 
-# Coordinate-frame block reused by Q1/Q2/Q5 (the metric questions that need it).
+# Coordinate-frame + workspace block (identical to spatial_qa.yaml system).
 shared_frame_block: |
-  COORDINATE FRAME:
-  - Origin: the robot arm's base center.
-  - X-axis: forward (positive = further into the workspace).
-  - Y-axis: right  (positive = to the robot's right when it faces forward).
-  - Z-axis: up     (positive = higher).
+  COORDINATE FRAME FROM AGENT VIEW:
+  - Origin: the robot arm's base center (where the robot is bolted to the table surface)
+  - X-axis: back and forward (positive = further into the workspace, away from the robot body)
+  - Y-axis: left and right in the image (positive = to the agent view image left, but to the robot's right when it faces forward)
+  - Z-axis: up and down   (positive = up and higher)
   - All distances are in METERS.
 
+  IMPORTANT: In the AGENT VIEW image, the robot's +Y (right) appears on the
+  LEFT side of the image (mirrored, like looking in a mirror).
+    Agent view: image-left = +Y (robot right), image-right = -Y (robot left),
+                image-up = +Z, +X comes toward camera.
+
   WORKSPACE CONTEXT (approximate, for scale reference):
-  - Table surface ≈ Z = -0.01 m.
-  - Objects on the table: Z ≈ -0.02 to +0.05 m.
-  - Gripper grasping at the table: Z ≈ 0.10 to 0.30 m; raised: Z ≈ 0.40 to 0.60 m.
-  - Workspace extends roughly: X 0.10–0.80 m, Y -0.35–0.35 m.
-  - Typical object size: 5–15 cm.
+  - The robot base is mounted ON TOP OF the workspace table, so the table surface
+    is at approximately Z = 0.0 m relative to the base (slightly negative, ≈ -0.01 m)
+  - Objects sitting on the table therefore have Z ≈ -0.02 to +0.05 m
+  - The gripper when reaching down to grasp an object is at Z ≈ 0.10 to 0.30 m
+  - The gripper when fully raised is at Z ≈ 0.40 to 0.60 m
+  - Workspace extends roughly: X from 0.10 to 0.80 m, Y from -0.35 to 0.35 m
+  - Typical manipulable objects are 5–15 cm in each dimension
+  - Robot maximum reach: ~0.85 m from the base
+
+# Orientation convention block (identical to spatial_qa.yaml system).
+shared_orientation_block: |
+  ORIENTATION CONVENTION (XYZ intrinsic Euler angles, in degrees):
+  The gripper's default pose is pointing STRAIGHT DOWN at the table.
+  In this default pose: roll ~ -180 (or +180), pitch ~ 0, yaw ~ 0.
+  In the default pose, the right gripper in agent view (i.e. the left gripper in first person view) has the camera looking black block.
+  Range: -180 to +180 degrees per axis.
+
+  ROLL (rotation about X-axis / forward):
+    Tilts the gripper sideways. From default (roll ~ -180, tip pointing down to -Z):
+    - Increase roll (e.g. -180 → -135 → -90):
+      tip tilts toward +Y (robot right = image LEFT in agent view).
+      At roll = -90: tip points fully toward +Y (horizontal, to the LEFT in agent view).
+    - Decrease roll (e.g. -180 → +135 → +90):
+      tip tilts toward -Y (robot left = image RIGHT in agent view).
+      At roll = +90: tip points fully toward -Y (horizontal, to the RIGHT in agent view).
+
+  PITCH (rotation about Y-axis / right):
+    Tilts the gripper forward/backward. From default (pitch ~ 0, tip pointing down):
+    - Increase pitch (e.g. 0 → +45 → +90):
+      tip tilts toward -X (backward, toward robot body = toward camera in agent view).
+      At pitch = +90: tip points fully toward -X (horizontal, toward camera = appears bigger).
+    - Decrease pitch (e.g. 0 → -45 → -90):
+      tip tilts toward +X (forward, into workspace = away from camera in agent view).
+      At pitch = -90: tip points fully toward +X (horizontal, away from camera = appears smaller).
+
+  YAW (rotation about Z-axis / up):
+    Swivels the gripper horizontally. Tip direction stays ~downward.
+    - Increase yaw (e.g. 0 → +45 → +90, and +90 → +180):
+      gripper rotates from -Y to +X, and then +X to +Y.
+      In agent view: gripper swivels toward image LEFT.
+    - Decrease yaw (e.g. 0 → -45 → -90, and -90 → -180):
+      gripper rotates from -Y to -X, and then -X to +Y.
+      In agent view: gripper swivels toward image RIGHT.
+
+    VISUAL CUE for yaw direction: One of the two gripper fingers has a small
+    BLACK SQUARE (wrist camera) mounted on top of it. This camera is on the
+    EE's local +X side. To judge yaw, look at the two fingers and find which
+    one has the black square:
+    - When the finger WITH the black square is in the +X direction (forward /
+      into workspace) RELATIVE TO the other finger → yaw is POSITIVE (near +90, range from 0 to +180).
+    - When it is in the -X direction (toward robot) relative to the other
+      finger → yaw is NEGATIVE (near -90, range from 0 to -180 ).
+    The gripper fingers have 180° symmetry, so yaw values that differ by 180°
+    produce the same grasp. The effective yaw range is [-90, +90], but you should still distinguish the positive and negative values.
 
 # ---------------------------------------------------------------------------
 # Q1 (folded with Q1_dest): source object position + destination position
@@ -46,8 +99,8 @@ q1:
     {shared_frame_block}
 
     TASK TYPES:
-    - "pick_and_place": pick up an object and place it on a destination (a basket, plate, shelf …).
-    - "articulation":   manipulate a fixed object in place (open a drawer, turn a switch …).
+    - "pick_and_place": pick up an object and move it to a destination (e.g. a plate, basket, shelf)
+    - "articulation": manipulate a fixed object in place (e.g. open a cabinet, turn on a stove)
 
     OUTPUT FORMAT:
     Respond with EXACTLY one JSON object containing only the keys
@@ -56,22 +109,21 @@ q1:
   user: |
     Task description: "{task_description}"
 
-    Q1 — SOURCE OBJECT POSITION:
+    Q1 - SOURCE OBJECT POSITION:
     What is the 3D position [x, y, z] of the PRIMARY OBJECT currently being manipulated
     (the object to pick up, or the articulated object such as a cabinet door)?
-    IMPORTANT: For multi-object tasks (e.g. "put both X and Y in the basket"),
-    objects are handled in the order they appear in the task description. The active
-    target is the FIRST object that has NOT YET been placed at the destination.
+    IMPORTANT: For multi-object tasks (e.g. "put both X and Y in the basket"), objects are
+    handled in the order they appear in the task description. The active target is the FIRST
+    object in the instruction that has NOT YET been placed at the destination. If the first
+    object is already at/near the destination, the active target switches to the next one.
+    Expected format: "q1": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
 
-    Q1_DEST — DESTINATION POSITION:
-    For "pick_and_place" tasks: the 3D position [x, y, z] of the DESTINATION
-    (container, plate, shelf, etc.). For "articulation" tasks: set all three
-    components to null.
-
-    Output format:
-      {{"task_type": "pick_and_place" | "articulation",
-        "q1":      {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}},
-        "q1_dest": {{"x": <float|null>,  "y": <float|null>,  "z": <float|null>}}}}
+    Q1_DEST - DESTINATION POSITION:
+    For "pick_and_place" tasks: what is the 3D position [x, y, z] of the DESTINATION
+    (the container, plate, shelf, or location where the object should be placed)?
+    For "articulation" tasks: set all values to null.
+    Expected format: "q1_dest": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+                or   "q1_dest": {{"x": null, "y": null, "z": null}}
 
 # ---------------------------------------------------------------------------
 # Q2: end-effector / gripper position
@@ -89,29 +141,18 @@ q2:
   user: |
     Task description: "{task_description}"
 
-    Q2 — GRIPPER POSITION:
-    What is the current 3D position [x, y, z] of the robot's end-effector
-    (gripper center)?
-
-    Output format:
-      {{"q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}}}
+    Q2 - GRIPPER POSITION:
+    What is the current 3D position [x, y, z] of the robot's end-effector (gripper center)?
+    Expected format: "q2": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
 
 # ---------------------------------------------------------------------------
-# Q3: binary can_close
+# Q3: gripper → target offset vector (not normalized)
 # ---------------------------------------------------------------------------
 q3:
   system: |
     You are an expert in 3D spatial reasoning for robot manipulation.
     {shared_view_note}
-
-    Your job is to decide whether the gripper should close RIGHT NOW.
-    Consider the gripper phase in the manipulation task:
-      - "approaching": gripper is open and moving toward the target → answer "no"
-      - "grasping": gripper is close to the target and about to grasp → answer "yes"
-      - "carrying": gripper is already closed and holding an object → answer "yes"
-      - "releasing": gripper is opening to release the object → answer "no"
-    Answer "yes" if the gripper jaws are positioned around the object and should close,
-    OR if the gripper is already holding an object.
+    {shared_frame_block}
 
     OUTPUT FORMAT:
     Respond with EXACTLY one JSON object containing only the key "q3".
@@ -120,17 +161,16 @@ q3:
   user: |
     Task description: "{task_description}"
 
-    Q3 — SHOULD GRIPPER CLOSE NOW:
-    Based on the current gripper and target object positions visible in the
-    images, should the gripper close right now?
-    Consider whether the gripper is approaching (open), grasping (closing around
-    the object), carrying (already holding), or releasing (letting go).
-
-    Output format:
-      {{"q3": {{"can_close": "yes" | "no"}}}}
+    Q3 - GRIPPER-TO-TARGET OFFSET:
+    What is the relative 3D offset [dx, dy, dz] from the robot's end-effector (gripper center)
+    to the TARGET OBJECT? In other words, compute: target_position - gripper_position.
+    A positive dx means the target is further forward (X+) than the gripper.
+    A positive dy means the target is further to the robot's right (Y+) than the gripper.
+    A positive dz means the target is higher (Z+) than the gripper.
+    Expected format: "q3": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}
 
 # ---------------------------------------------------------------------------
-# Q4: next-movement unit direction vector
+# Q4: per-axis categorical spatial relation
 # ---------------------------------------------------------------------------
 q4:
   system: |
@@ -145,15 +185,17 @@ q4:
   user: |
     Task description: "{task_description}"
 
-    Q4 — NEXT MOVEMENT DIRECTION:
-    In which 3D direction should the gripper move NEXT to make progress on
-    the task? Provide a NORMALIZED unit vector [dx, dy, dz] (length ≈ 1.0).
-
-    Output format:
-      {{"q4": {{"dx": <float>, "dy": <float>, "dz": <float>}}}}
+    Q4 - SPATIAL RELATIONSHIP (LANGUAGE):
+    Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
+    Use ONLY the exact labels listed below (no other words):
+    - X-axis: "in_front" (target is further from robot base, X+), "behind" (target is closer to robot base, X-), or "aligned_x"
+    - Y-axis: "right" (target is to the robot's right, Y+), "left" (target is to the robot's left, Y-), or "aligned_y"
+    - Z-axis: "above" (target is higher, Z+), "below" (target is lower, Z-), or "aligned_z"
+    Use "aligned_x"/"aligned_y"/"aligned_z" only if the offset on that axis is very small (a few centimeters or less).
+    Expected format: "q4": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
 
 # ---------------------------------------------------------------------------
-# Q5: gripper → target offset vector (not normalized)
+# Q5: pairwise inter-object distance
 # ---------------------------------------------------------------------------
 q5:
   system: |
@@ -168,25 +210,19 @@ q5:
   user: |
     Task description: "{task_description}"
 
-    Q5 — GRIPPER-TO-TARGET OFFSET:
-    Compute the 3D offset target_position − gripper_position, in meters.
-    Positive dx = target is further forward; positive dy = to the robot's
-    right; positive dz = above the gripper.
-
-    Output format:
-      {{"q5": {{"dx": <float_meters>, "dy": <float_meters>, "dz": <float_meters>}}}}
+    Q5 - PAIRWISE OBJECT DISTANCE:
+    Among ALL visible scene objects EXCEPT the target and its destination, find the two closest objects
+    and report their names and the Euclidean distance between them in meters.
+    Expected format: "q5": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}
 
 # ---------------------------------------------------------------------------
-# Q6: per-axis categorical spatial relation
+# Q6: end-effector orientation (euler angles in degrees)
 # ---------------------------------------------------------------------------
 q6:
   system: |
     You are an expert in 3D spatial reasoning for robot manipulation.
     {shared_view_note}
-
-    Use ONLY the exact axis labels listed below — no other words, no synonyms.
-    "aligned_*" applies only when the offset on that axis is very small
-    (a few centimeters or less).
+    {shared_orientation_block}
 
     OUTPUT FORMAT:
     Respond with EXACTLY one JSON object containing only the key "q6".
@@ -195,31 +231,44 @@ q6:
   user: |
     Task description: "{task_description}"
 
-    Q6 — TARGET RELATIVE TO GRIPPER:
-    Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
-    - X-axis: "in_front" (target further from robot, X+) | "behind" (closer, X-) | "aligned_x"
-    - Y-axis: "right" (Y+) | "left" (Y-) | "aligned_y"
-    - Z-axis: "above" (Z+) | "below" (Z-) | "aligned_z"
-
-    Output format:
-      {{"q6": {{"x": <x-label>, "y": <y-label>, "z": <z-label>}}}}
+    Q6 - END-EFFECTOR ORIENTATION:
+    What is the current orientation of the robot's end-effector (gripper)?
+    Report as Euler angles (see ORIENTATION CONVENTION above).
+    Default gripper-down: roll ~ +/-180, pitch ~ 0, yaw ~ 0.
+    In the AGENT VIEW image, from the default gripper-down pose:
+    - Roll changes → tip tilts LEFT/RIGHT in agent view
+      (increase roll → tip toward image LEFT; decrease roll → tip toward image RIGHT)
+    - Pitch changes → tip tilts TOWARD/AWAY from camera in agent view
+      (+pitch → tip toward camera/bigger; -pitch → tip away from camera/smaller)
+    - Yaw changes → gripper swivels LEFT/RIGHT in agent view
+      (+yaw → toward image LEFT; -yaw → toward image RIGHT)
+    Range: -180 to +180 degrees per axis.
+    Expected format: "q6": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}
 
 # ---------------------------------------------------------------------------
-# Q7: end-effector orientation (euler angles in degrees)
+# Q7: gripper openness (continuous)
 # ---------------------------------------------------------------------------
 q7:
   system: |
     You are an expert in 3D spatial reasoning for robot manipulation.
     {shared_view_note}
 
-    ORIENTATION CONVENTION:
-    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
-    - Roll: rotation about the X-axis (forward).
-    - Pitch: rotation about the Y-axis (left).
-    - Yaw: rotation about the Z-axis (up).
-    - Range: -180 to +180 degrees per axis.
-    - A gripper pointing straight down has pitch ≈ -90° or +90° depending
-      on which way the fingers face.
+    The gripper has two parallel finger jaws. The openness value measures the
+    physical gap between the fingers:
+    - 1.0 = fingers fully open (maximum gap, ~5cm between finger pads)
+    - 0.0 = fingers fully closed / touching (no gap, empty close)
+    Note: when the gripper is holding an object, openness is NOT 0 — the object keeps
+    the fingers apart. The value depends on the object's cross-section size:
+    Typical openness by phase approximately for reference (you still need to calculate precise values on your own):
+    - Approaching (fingers open): Around 0.95 - 1.0
+    - Carrying (holding object): varies by object size:
+        Large cylinders (soup cans, ketchup, sauce bottles): 0.68 - 0.79
+        Medium boxes (cream cheese, butter, juice cartons): 0.47 - 0.69
+        Flat/thin objects (books): ~0.38
+        Small handles/knobs (stove knob, moka pot): 0.27 - 0.28
+        Mugs (handle grip varies): 0.08 - 0.30
+        Thin rims (bowls, cabinet doors): 0.06 - 0.07
+    - Releasing: similar to carrying value
 
     OUTPUT FORMAT:
     Respond with EXACTLY one JSON object containing only the key "q7".
@@ -228,27 +277,39 @@ q7:
   user: |
     Task description: "{task_description}"
 
-    Q7 — END-EFFECTOR ORIENTATION:
-    What is the current orientation of the robot's end-effector (gripper)?
-    Report as Euler angles (roll, pitch, yaw) in DEGREES using the XYZ
-    intrinsic convention.
-
-    Output format:
-      {{"q7": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
+    Q7 - GRIPPER OPENNESS:
+    How open is the gripper? Report a value between 0.0 and 1.0 based on the physical
+    finger gap distance:
+    - 1.0 = fingers fully open (maximum gap, ~5cm between finger pads)
+    - 0.0 = fingers fully closed / touching (no gap, empty close)
+    Note: when the gripper is holding an object, openness is NOT 0 — the object keeps
+    the fingers apart. The value depends on the object's cross-section size:
+    Typical openness by phase approximately for reference (you still need to calculate precise values on your own):
+    - Approaching (fingers open): Around 0.95 - 1.0
+    - Carrying (holding object): varies by object size:
+        Large cylinders (soup cans, ketchup, sauce bottles): 0.68 - 0.79
+        Medium boxes (cream cheese, butter, juice cartons): 0.47 - 0.69
+        Flat/thin objects (books): ~0.38
+        Small handles/knobs (stove knob, moka pot): 0.27 - 0.28
+        Mugs (handle grip varies): 0.08 - 0.30
+        Thin rims (bowls, cabinet doors): 0.06 - 0.07
+    - Releasing: similar to carrying value
+    Use the wrist view to see the finger gap and identify what is between the fingers.
+    Expected format: "q7": {{"openness": <float_0_to_1>}}
 
 # ---------------------------------------------------------------------------
-# Q8: target object orientation (euler angles in degrees)
+# Q8: 7D next action
 # ---------------------------------------------------------------------------
 q8:
   system: |
     You are an expert in 3D spatial reasoning for robot manipulation.
     {shared_view_note}
+    {shared_frame_block}
+    {shared_orientation_block}
 
-    ORIENTATION CONVENTION:
-    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
-    - Range: -180 to +180 degrees per axis.
-    - A box sitting flat on the table has roll ≈ 0, pitch ≈ 0.
-    - A bottle lying on its side has a non-zero roll or pitch.
+    The gripper openness measures the physical gap between the fingers:
+    - 1.0 = fingers fully open (maximum gap, ~5cm)
+    - 0.0 = fingers fully closed / touching (no gap)
 
     OUTPUT FORMAT:
     Respond with EXACTLY one JSON object containing only the key "q8".
@@ -257,94 +318,14 @@ q8:
   user: |
     Task description: "{task_description}"
 
-    Q8 — TARGET OBJECT ORIENTATION:
-    What is the current orientation of the TARGET OBJECT (the object to be
-    manipulated)? Report as Euler angles (roll, pitch, yaw) in DEGREES
-    using the XYZ intrinsic convention.
-
-    Output format:
-      {{"q8": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
-
-# ---------------------------------------------------------------------------
-# Q9: relative rotation from EE to target object
-# ---------------------------------------------------------------------------
-q9:
-  system: |
-    You are an expert in 3D spatial reasoning for robot manipulation.
-    {shared_view_note}
-
-    ORIENTATION CONVENTION:
-    - Euler angles use XYZ intrinsic convention (roll, pitch, yaw), in DEGREES.
-    - Range: -180 to +180 degrees per axis.
-    - The relative rotation describes how the end-effector must rotate to
-      align its frame with the target object's frame.
-
-    OUTPUT FORMAT:
-    Respond with EXACTLY one JSON object containing only the key "q9".
-    No prose, no markdown, no code fences.
-
-  user: |
-    Task description: "{task_description}"
-
-    Q9 — RELATIVE ROTATION (EE → TARGET):
-    What rotation must the end-effector undergo to align its orientation
-    with the target object? Report as Euler angles (roll, pitch, yaw) in
-    DEGREES using the XYZ intrinsic convention.
-
-    Output format:
-      {{"q9": {{"roll": <float_degrees>, "pitch": <float_degrees>, "yaw": <float_degrees>}}}}
-
-# ---------------------------------------------------------------------------
-# Q10: pairwise inter-object distance
-# ---------------------------------------------------------------------------
-q10:
-  system: |
-    You are an expert in 3D spatial reasoning for robot manipulation.
-    {shared_view_note}
-    {shared_frame_block}
-
-    OUTPUT FORMAT:
-    Respond with EXACTLY one JSON object containing only the key "q10".
-    No prose, no markdown, no code fences.
-
-  user: |
-    Task description: "{task_description}"
-
-    Q10 — PAIRWISE OBJECT DISTANCE:
-    Consider ALL visible objects in the scene EXCEPT the target object
-    and its destination (if any). Among these remaining objects, find the
-    two that are CLOSEST to each other and report:
-    1. Their names.
-    2. The Euclidean distance between their centers in meters.
-
-    Output format:
-      {{"q10": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}}}
-
-# ---------------------------------------------------------------------------
-# Q11: gripper openness (continuous)
-# ---------------------------------------------------------------------------
-q11:
-  system: |
-    You are an expert in 3D spatial reasoning for robot manipulation.
-    {shared_view_note}
-
-    The gripper has two parallel finger jaws. When fully open, the gap between
-    the fingers is at its maximum. When fully closed, the fingers touch.
-    Note: during "carrying" phase the gripper is closed around an object
-    (openness ≈ 0.0); during "approaching" phase the gripper is typically
-    wide open (openness ≈ 1.0).
-
-    OUTPUT FORMAT:
-    Respond with EXACTLY one JSON object containing only the key "q11".
-    No prose, no markdown, no code fences.
-
-  user: |
-    Task description: "{task_description}"
-
-    Q11 — GRIPPER OPENNESS:
-    How open is the robot gripper right now? Report a single value between
-    0.0 (fingers fully closed / touching) and 1.0 (fingers fully open).
-    Use the wrist view for a close-up look at the finger gap.
-
-    Output format:
-      {{"q11": {{"openness": <float_0_to_1>}}}}
+    Q8 - NEXT ACTION (7D robot command):
+    What action should the robot execute NEXT to make progress on the task?
+    The action has 3 components:
+    (a) Translation: delta position [dx, dy, dz] — which direction should the gripper move?
+        Values are in [-1, +1], where ±1 = max speed along that axis.
+    (b) Rotation: delta orientation [droll, dpitch, dyaw] — how should the gripper rotate?
+        Values are in [-1, +1], where ±1 = max rotation speed about that axis.
+    (c) Gripper: -1.0 = open/release (fingers open), +1.0 = close/grasp (fingers close).
+    Expected format: "q8": {{"dx": <float>, "dy": <float>, "dz": <float>,
+                             "droll": <float>, "dpitch": <float>, "dyaw": <float>,
+                             "gripper": <float>}}

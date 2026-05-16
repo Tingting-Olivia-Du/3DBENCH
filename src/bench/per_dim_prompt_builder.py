@@ -1,7 +1,7 @@
 """Per-dimension prompt builder for the spatial QA benchmark.
 
 Loads `prompts/spatial_qa_per_dim.yaml` and produces stripped system + user
-prompts that ask only ONE dimension (q1, q2, q3, q4, q5, or q6).
+prompts that ask only ONE dimension (q1 .. q8).
 
 Q1_dest is folded into Q1: a single Q1 prompt asks for both source and
 destination positions.
@@ -18,7 +18,7 @@ import yaml
 PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
 DEFAULT_TEMPLATE = PROMPTS_DIR / "spatial_qa_per_dim.yaml"
 
-VALID_DIMS = ("q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11")
+VALID_DIMS = ("q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8")
 
 
 class PerDimPromptBuilder:
@@ -41,10 +41,12 @@ class PerDimPromptBuilder:
         # Inline shared blocks once, so .format(task_description=...) is safe later.
         view_note = self._templates.get("shared_view_note", "").strip()
         frame_block = self._templates.get("shared_frame_block", "").strip()
+        orientation_block = self._templates.get("shared_orientation_block", "").strip()
         self._system = (
             self._templates[dim]["system"]
             .replace("{shared_view_note}", view_note)
             .replace("{shared_frame_block}", frame_block)
+            .replace("{shared_orientation_block}", orientation_block)
             .strip()
         )
         # The user template still has {task_description} as a real format placeholder.

@@ -27,9 +27,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.metrics import (
-    classification_metrics,
-    direction_metrics,
+    angular_metrics,
     position_metrics,
+    scalar_metrics,
     spatial_relation_metrics,
 )
 from bench.output_parser import ResponseParser
@@ -63,6 +63,31 @@ def _safe_list(val) -> list[float] | None:
     return None
 
 
+def _compute_q8_metrics(gt_q8: list[list[float]], pred_q8: list[list[float]], n_response: int) -> dict:
+    """Compute per-component and aggregate metrics for the 7D next-action prediction.
+
+    Each element is a 7-vector: [dx, dy, dz, droll, dpitch, dyaw, gripper].
+    """
+    n = len(gt_q8)
+    if n == 0:
+        return {"n": 0, "parse_rate": 0.0}
+
+    gt = np.array(gt_q8)
+    pr = np.array(pred_q8)
+    ae = np.abs(pr - gt)
+
+    comp_names = ["dx", "dy", "dz", "droll", "dpitch", "dyaw", "gripper"]
+    result: dict = {"n": n, "parse_rate": n / n_response if n_response > 0 else 0.0}
+    for i, name in enumerate(comp_names):
+        result[f"mae_{name}"] = float(np.mean(ae[:, i]))
+    result["mae_translation"] = float(np.mean(ae[:, :3]))
+    result["mae_rotation"] = float(np.mean(ae[:, 3:6]))
+    gt_sign = gt[:, 6] > 0
+    pr_sign = pr[:, 6] > 0
+    result["gripper_accuracy"] = float(np.mean(gt_sign == pr_sign))
+    return result
+
+
 def _load_responses_from_run(run_dir: Path, model_name: str) -> dict[int, dict]:
     """Load all sample JSON files for a model within a run directory."""
     model_dir = run_dir / model_name
@@ -88,14 +113,29 @@ def _load_responses_from_run(run_dir: Path, model_name: str) -> dict[int, dict]:
 
 def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
                        parser: ResponseParser, verbose: bool = False) -> dict:
-    """Compute metrics for a subset of samples (one suite × one model)."""
+    """Compute metrics for a subset of samples (one suite × one model).
+
+    Question numbering (new):
+      Q1  – target object position        (position_metrics)
+      Q1d – destination position           (position_metrics)
+      Q2  – gripper position               (position_metrics)
+      Q3  – gripper-to-target offset       (position_metrics)
+      Q4  – spatial relation               (spatial_relation_metrics)
+      Q5  – pairwise distance              (scalar_metrics)
+      Q6  – EE orientation                 (angular_metrics)
+      Q7  – gripper openness               (scalar_metrics)
+      Q8  – 7D next action                 (custom)
+    """
     gt_q1, pred_q1 = [], []
     gt_q1d, pred_q1d = [], []
     gt_q2, pred_q2 = [], []
-    gt_q3, pred_q3 = [], []
-    gt_q4, pred_q4 = [], []
-    gt_q5, pred_q5 = [], []
-    gt_q6, pred_q6 = [], []
+    gt_q3, pred_q3 = [], []     # gripper-to-target offset vector
+    gt_q4, pred_q4 = [], []     # spatial relation dicts
+    gt_q5, pred_q5 = [], []     # pairwise distance (scalar)
+    gt_q6e, pred_q6e = [], []   # EE orientation euler deg
+    gt_q6q, pred_q6q = [], []   # EE orientation quaternion wxyz
+    gt_q7, pred_q7 = [], []     # gripper openness (scalar)
+    gt_q8, pred_q8 = [], []     # 7D next action
     task_type_correct = []
     n_total = len(manifest_subset)
     n_response = 0
@@ -114,44 +154,88 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
         if gt_task_type and pred_task_type:
             task_type_correct.append(int(gt_task_type == pred_task_type))
 
+        # Q1: source object position
         gt_q1_val = _safe_list(gt.get("target_pos"))
         pred_q1_val = _safe_list(parsed["q1_object_pos"])
         if gt_q1_val and pred_q1_val:
             gt_q1.append(gt_q1_val); pred_q1.append(pred_q1_val)
 
+        # Q1_dest: destination position
         gt_q1d_val = _safe_list(gt.get("dest_pos"))
         pred_q1d_val = _safe_list(parsed["q1_dest_pos"])
         if gt_q1d_val and pred_q1d_val:
             gt_q1d.append(gt_q1d_val); pred_q1d.append(pred_q1d_val)
 
+        # Q2: gripper position
         gt_q2_val = _safe_list(gt.get("eef_pos"))
         pred_q2_val = _safe_list(parsed["q2_gripper_pos"])
         if gt_q2_val and pred_q2_val:
             gt_q2.append(gt_q2_val); pred_q2.append(pred_q2_val)
 
-        gt_q3_val = gt.get("can_close")
-        pred_q3_val = parsed["q3_can_close"]
-        if pred_q3_val is not None:
-            gt_q3.append(bool(gt_q3_val)); pred_q3.append(bool(pred_q3_val))
+        # Q3: gripper-to-target offset vector
+        gt_q3_val = _safe_list(gt.get("gripper_to_target_delta"))
+        pred_q3_val = _safe_list(parsed.get("q3_gripper_to_target"))
+        if gt_q3_val and pred_q3_val:
+            gt_q3.append(gt_q3_val); pred_q3.append(pred_q3_val)
 
-        gt_q4_val = _safe_list(gt.get("next_direction"))
-        pred_q4_val = _safe_list(parsed["q4_next_dir"])
-        if gt_q4_val and pred_q4_val:
+        # Q4: spatial relation classification
+        gt_q4_val = gt.get("gripper_to_target_relation")
+        pred_q4_val = parsed.get("q4_spatial_relation")
+        if (
+            isinstance(gt_q4_val, dict)
+            and isinstance(pred_q4_val, dict)
+            and all(pred_q4_val.get(ax) is not None for ax in ("x", "y", "z"))
+        ):
             gt_q4.append(gt_q4_val); pred_q4.append(pred_q4_val)
 
-        gt_q5_val = _safe_list(gt.get("gripper_to_target_delta"))
-        pred_q5_val = _safe_list(parsed["q5_gripper_to_target"])
-        if gt_q5_val and pred_q5_val:
-            gt_q5.append(gt_q5_val); pred_q5.append(pred_q5_val)
+        # Q5: pairwise distance (scalar)
+        gt_q5_dict = gt.get("pairwise_distance")
+        pred_q5_dict = parsed.get("q5_pairwise_distance")
+        if isinstance(gt_q5_dict, dict) and isinstance(pred_q5_dict, dict):
+            gt_d = gt_q5_dict.get("distance_m")
+            pred_d = pred_q5_dict.get("distance_m")
+            if gt_d is not None and pred_d is not None:
+                gt_q5.append(float(gt_d))
+                pred_q5.append(float(pred_d))
 
-        gt_q6_val = gt.get("gripper_to_target_relation")
-        pred_q6_val = parsed["q6_spatial_relation"]
+        # Q6: EE orientation
+        gt_q6e_val = _safe_list(gt.get("eef_orientation_euler_deg"))
+        pred_q6e_val = _safe_list(parsed.get("q6_eef_orientation_euler"))
+        if gt_q6e_val and pred_q6e_val:
+            gt_q6e.append(gt_q6e_val); pred_q6e.append(pred_q6e_val)
+            gt_q6q_val = gt.get("eef_orientation_quat")
+            if gt_q6q_val:
+                gt_q6q.append(gt_q6q_val)
+                from bench.gt_extractor import euler_deg_to_quat_wxyz
+                pred_q6q.append(euler_deg_to_quat_wxyz(pred_q6e_val))
+
+        # Q7: gripper openness
+        gt_q7_val = gt.get("gripper_openness")
+        pred_q7_val = parsed.get("q7_gripper_openness")
+        if gt_q7_val is not None and pred_q7_val is not None:
+            gt_q7.append(float(gt_q7_val))
+            pred_q7.append(float(pred_q7_val))
+
+        # Q8: 7D next action
+        gt_q8_val = gt.get("demo_action")
+        pred_q8_val = parsed.get("q8_next_action")
+        pred_q8_list = None
+        if isinstance(pred_q8_val, dict):
+            tr = pred_q8_val.get("translation")
+            ro = pred_q8_val.get("rotation")
+            gr = pred_q8_val.get("gripper")
+            if (
+                isinstance(tr, (list, tuple)) and len(tr) == 3
+                and isinstance(ro, (list, tuple)) and len(ro) == 3
+                and gr is not None
+            ):
+                pred_q8_list = [float(v) for v in tr] + [float(v) for v in ro] + [float(gr)]
         if (
-            isinstance(gt_q6_val, dict)
-            and isinstance(pred_q6_val, dict)
-            and all(pred_q6_val.get(ax) is not None for ax in ("x", "y", "z"))
+            isinstance(gt_q8_val, (list, tuple)) and len(gt_q8_val) == 7
+            and pred_q8_list is not None
         ):
-            gt_q6.append(gt_q6_val); pred_q6.append(pred_q6_val)
+            gt_q8.append([float(v) for v in gt_q8_val])
+            pred_q8.append(pred_q8_list)
 
     return {
         "n_total": n_total,
@@ -164,14 +248,19 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
                    "parse_rate": len(pred_q1d) / n_response if n_response else 0.0},
         "q2":     {**position_metrics(pred_q2, gt_q2),
                    "parse_rate": len(pred_q2) / n_response if n_response else 0.0},
-        "q3":     {**classification_metrics(pred_q3, gt_q3),
+        "q3":     {**position_metrics(pred_q3, gt_q3),
                    "parse_rate": len(pred_q3) / n_response if n_response else 0.0},
-        "q4":     {**direction_metrics(pred_q4, gt_q4),
+        "q4":     {**spatial_relation_metrics(pred_q4, gt_q4),
                    "parse_rate": len(pred_q4) / n_response if n_response else 0.0},
-        "q5":     {**position_metrics(pred_q5, gt_q5),
+        "q5":     {**scalar_metrics(pred_q5, gt_q5),
                    "parse_rate": len(pred_q5) / n_response if n_response else 0.0},
-        "q6":     {**spatial_relation_metrics(pred_q6, gt_q6),
-                   "parse_rate": len(pred_q6) / n_response if n_response else 0.0},
+        "q6":     {**angular_metrics(pred_q6e, gt_q6e,
+                                     pred_q6q if pred_q6q else None,
+                                     gt_q6q if gt_q6q else None),
+                   "parse_rate": len(pred_q6e) / n_response if n_response else 0.0},
+        "q7":     {**scalar_metrics(pred_q7, gt_q7),
+                   "parse_rate": len(pred_q7) / n_response if n_response else 0.0},
+        "q8":     _compute_q8_metrics(gt_q8, pred_q8, n_response),
     }
 
 
@@ -263,7 +352,7 @@ def main() -> None:
                 aggregate_data[model][suite] = metrics
                 print(f"parse={metrics['parse_rate']:.0%}  "
                       f"q1_mae={_f(metrics['q1'].get('mae_overall'))}  "
-                      f"q3_acc={_f(metrics['q3'].get('accuracy'))}")
+                      f"q3_mae={_f(metrics['q3'].get('mae_overall'))}")
 
             # Also compute "all" (full manifest)
             print(f"    suite=ALL ({len(manifest)} samples) ...", end=" ", flush=True)
@@ -272,7 +361,7 @@ def main() -> None:
             aggregate_data[model]["all"] = metrics_all
             print(f"parse={metrics_all['parse_rate']:.0%}  "
                   f"q1_mae={_f(metrics_all['q1'].get('mae_overall'))}  "
-                  f"q3_acc={_f(metrics_all['q3'].get('accuracy'))}")
+                  f"q3_mae={_f(metrics_all['q3'].get('mae_overall'))}")
 
     # -----------------------------------------------------------------------
     # Save JSON
@@ -302,9 +391,11 @@ def main() -> None:
 
         # Summary table
         hdrs = ["Model", "Run", "N", "Parse%",
-                "Q1 MAE", "Q1_dest MAE", "Q2 MAE",
-                "Q3 Acc", "Q3 F1", "Q4 CosSim",
-                "Q5 MAE", "Q6 AccAll", "TaskType Acc"]
+                "Q1 MAE", "Q1d MAE", "Q2 MAE",
+                "Q3 MAE", "Q4 AccAll",
+                "Q5 MAE", "Q6 MAE (°)",
+                "Q7 MAE", "Q8 TransMAE", "Q8 GripAcc",
+                "TaskType Acc"]
         rows = []
         for model in models:
             m = aggregate_data[model].get(suite)
@@ -318,17 +409,19 @@ def main() -> None:
                 _f(m.get("q1", {}).get("mae_overall")),
                 _f(m.get("q1_dest", {}).get("mae_overall")),
                 _f(m.get("q2", {}).get("mae_overall")),
-                _f(m.get("q3", {}).get("accuracy")),
-                _f(m.get("q3", {}).get("f1")),
-                _f(m.get("q4", {}).get("mean_cosine_sim")),
-                _f(m.get("q5", {}).get("mae_overall")),
-                _f(m.get("q6", {}).get("acc_all")),
+                _f(m.get("q3", {}).get("mae_overall")),
+                _f(m.get("q4", {}).get("acc_all")),
+                _f(m.get("q5", {}).get("mae")),
+                _f(m.get("q6", {}).get("mae_overall_deg")),
+                _f(m.get("q7", {}).get("mae")),
+                _f(m.get("q8", {}).get("mae_translation")),
+                _p(m.get("q8", {}).get("gripper_accuracy")),
                 _p(m.get("task_type_accuracy")),
             ])
         lines.append(_md_table(hdrs, rows))
         lines.append("")
 
-        # Per-axis MAE detail
+        # Per-axis MAE detail (position-type questions)
         lines.append(f"### Per-axis MAE — Suite `{suite}`\n")
         hdrs2 = ["Model", "Q", "MAE x", "MAE y", "MAE z", "RMSE", "n"]
         rows2 = []
@@ -338,7 +431,7 @@ def main() -> None:
                 continue
             for q_key, label in (
                 ("q1", "Q1 source"), ("q1_dest", "Q1 dest"),
-                ("q2", "Q2 gripper"), ("q5", "Q5 offset"),
+                ("q2", "Q2 gripper"), ("q3", "Q3 offset"),
             ):
                 qm = m.get(q_key, {})
                 rows2.append([
@@ -349,27 +442,47 @@ def main() -> None:
         lines.append(_md_table(hdrs2, rows2))
         lines.append("")
 
-        # Q3 detail
-        lines.append(f"### Q3 Detail — Suite `{suite}`\n")
-        hdrs3 = ["Model", "Accuracy", "F1", "GT positive%", "Pred positive%", "Parse%"]
-        rows3 = []
+        # Q4 detail (spatial relation)
+        lines.append(f"### Q4 Spatial Relation Detail — Suite `{suite}`\n")
+        hdrs4 = ["Model", "Acc X", "Acc Y", "Acc Z", "Acc All", "F1 X", "F1 Y", "F1 Z", "Parse%"]
+        rows4 = []
         for model in models:
             m = aggregate_data[model].get(suite)
             if m is None:
                 continue
-            qm = m.get("q3", {})
-            rows3.append([
+            qm = m.get("q4", {})
+            rows4.append([
                 f"`{model}`",
-                _f(qm.get("accuracy")), _f(qm.get("f1")),
-                _p(qm.get("positive_rate_gt")), _p(qm.get("positive_rate_pred")),
+                _f(qm.get("acc_x")), _f(qm.get("acc_y")), _f(qm.get("acc_z")),
+                _f(qm.get("acc_all")),
+                _f(qm.get("f1_x")), _f(qm.get("f1_y")), _f(qm.get("f1_z")),
                 _p(qm.get("parse_rate")),
             ])
-        lines.append(_md_table(hdrs3, rows3))
+        lines.append(_md_table(hdrs4, rows4))
         lines.append("")
 
-        # Q6 detail
-        lines.append(f"### Q6 Detail — Suite `{suite}`\n")
-        hdrs6 = ["Model", "Acc X", "Acc Y", "Acc Z", "Acc All", "F1 X", "F1 Y", "F1 Z", "Parse%"]
+        # Q5/Q7 scalar detail
+        lines.append(f"### Q5/Q7 Scalar Detail — Suite `{suite}`\n")
+        hdrs_sc = ["Model", "Q", "MAE", "RMSE", "n"]
+        rows_sc = []
+        for model in models:
+            m = aggregate_data[model].get(suite)
+            if m is None:
+                continue
+            for q_key, label in (("q5", "Q5 Pairwise Dist"), ("q7", "Q7 Openness")):
+                qm = m.get(q_key, {})
+                rows_sc.append([
+                    f"`{model}`", label,
+                    _f(qm.get("mae")), _f(qm.get("rmse")),
+                    str(qm.get("n", 0)),
+                ])
+        lines.append(_md_table(hdrs_sc, rows_sc))
+        lines.append("")
+
+        # Q6 orientation detail
+        lines.append(f"### Q6 EE Orientation Detail — Suite `{suite}`\n")
+        hdrs6 = ["Model", "MAE Roll", "MAE Pitch", "MAE Yaw", "MAE Overall",
+                  "Geodesic Mean", "Geodesic Median", "n"]
         rows6 = []
         for model in models:
             m = aggregate_data[model].get(suite)
@@ -378,12 +491,32 @@ def main() -> None:
             qm = m.get("q6", {})
             rows6.append([
                 f"`{model}`",
-                _f(qm.get("acc_x")), _f(qm.get("acc_y")), _f(qm.get("acc_z")),
-                _f(qm.get("acc_all")),
-                _f(qm.get("f1_x")), _f(qm.get("f1_y")), _f(qm.get("f1_z")),
-                _p(qm.get("parse_rate")),
+                _f(qm.get("mae_roll_deg")), _f(qm.get("mae_pitch_deg")),
+                _f(qm.get("mae_yaw_deg")), _f(qm.get("mae_overall_deg")),
+                _f(qm.get("geodesic_mean_deg")), _f(qm.get("geodesic_median_deg")),
+                str(qm.get("n", 0)),
             ])
         lines.append(_md_table(hdrs6, rows6))
+        lines.append("")
+
+        # Q8 7D action detail
+        lines.append(f"### Q8 7D Action Detail — Suite `{suite}`\n")
+        hdrs8 = ["Model", "MAE dx", "MAE dy", "MAE dz",
+                  "Trans MAE", "Rot MAE", "Grip Acc", "n"]
+        rows8 = []
+        for model in models:
+            m = aggregate_data[model].get(suite)
+            if m is None:
+                continue
+            qm = m.get("q8", {})
+            rows8.append([
+                f"`{model}`",
+                _f(qm.get("mae_dx")), _f(qm.get("mae_dy")), _f(qm.get("mae_dz")),
+                _f(qm.get("mae_translation")), _f(qm.get("mae_rotation")),
+                _p(qm.get("gripper_accuracy")),
+                str(qm.get("n", 0)),
+            ])
+        lines.append(_md_table(hdrs8, rows8))
         lines.append("")
 
     lines.append("---\n")

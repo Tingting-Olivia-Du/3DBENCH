@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare Qwen2.5-VL-3B base vs per-dim LoRA on CALVIN or LIBERO.
 
-For each QA dimension (Q1, Q1_dest, Q2, Q3, Q4, Q5, Q6) the script:
+For each QA dimension (Q1, Q1_dest, Q2, Q3, Q4, Q5, Q6, Q7, Q8) the script:
   - reads the base run    from <base_root>/<base_slug>/<latest>/...
   - reads the LoRA run    from <lora_root>/<lora_slug_template.format(dim=...)>/<latest>/...
   - parses each response with the existing ResponseParser
@@ -9,10 +9,12 @@ For each QA dimension (Q1, Q1_dest, Q2, Q3, Q4, Q5, Q6) the script:
   - reports base, LoRA, and the LoRA-vs-base delta
 
 Per-dim primary metric (lower-is-better unless noted):
-  Q1, Q1_dest, Q2, Q5  : MAE overall (m), RMSE overall (m)
-  Q3                   : accuracy (higher is better), F1
-  Q4                   : mean cosine similarity (higher is better)
-  Q6                   : per-axis accuracy + all-axes accuracy (higher is better)
+  Q1, Q1_dest, Q2, Q3   : MAE overall (m), RMSE overall (m)
+  Q4                    : per-axis accuracy + all-axes accuracy (higher is better)
+  Q5                    : MAE (m) — pairwise distance (lower is better)
+  Q6                    : MAE overall (°) — EE orientation (lower is better)
+  Q7                    : MAE — gripper openness (lower is better)
+  Q8                    : MAE translation — 7D next action (lower is better)
 
 Usage:
   # CALVIN (default)
@@ -65,11 +67,12 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.output_parser import ResponseParser
 from bench.metrics import (
-    classification_metrics,
-    direction_metrics,
+    angular_metrics,
     position_metrics,
+    scalar_metrics,
     spatial_relation_metrics,
 )
+import numpy as np
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +127,7 @@ def parse_args() -> argparse.Namespace:
                         "suite when --suite_filter is given).")
     p.add_argument("--out_md",   default=None,
                    help="Output markdown path. Same defaulting rule as --out_json.")
-    p.add_argument("--dims", nargs="+", default=["q1", "q2", "q3", "q4", "q5", "q6"])
+    p.add_argument("--dims", nargs="+", default=["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"])
     args = p.parse_args()
 
     preset = BENCHMARK_PRESETS[args.benchmark]
@@ -239,6 +242,7 @@ def _score_q2(parser, samples, gt_by_id) -> dict:
 
 
 def _score_q3(parser, samples, gt_by_id) -> dict:
+    """Q3: gripper-to-target offset vector."""
     preds, gts = [], []
     n_total = n_parsed = 0
     for sid, rec in samples.items():
@@ -246,49 +250,7 @@ def _score_q3(parser, samples, gt_by_id) -> dict:
             continue
         n_total += 1
         parsed = parser.parse(rec["raw_response"])
-        v = parsed["q3_can_close"]
-        if v is None:
-            continue
-        preds.append(bool(v))
-        gts.append(bool(gt_by_id[sid]["gt"]["can_close"]))
-        n_parsed += 1
-    m = classification_metrics(preds, gts)
-    m["n_total"] = n_total
-    m["n_parsed"] = n_parsed
-    m["parse_rate"] = n_parsed / max(1, n_total)
-    return m
-
-
-def _score_q4(parser, samples, gt_by_id) -> dict:
-    preds, gts = [], []
-    n_total = n_parsed = 0
-    for sid, rec in samples.items():
-        if sid not in gt_by_id:
-            continue
-        n_total += 1
-        parsed = parser.parse(rec["raw_response"])
-        v = parsed["q4_next_dir"]
-        if v is None or any(x is None for x in v):
-            continue
-        preds.append(v)
-        gts.append(gt_by_id[sid]["gt"]["next_direction"])
-        n_parsed += 1
-    m = direction_metrics(preds, gts)
-    m["n_total"] = n_total
-    m["n_parsed"] = n_parsed
-    m["parse_rate"] = n_parsed / max(1, n_total)
-    return m
-
-
-def _score_q5(parser, samples, gt_by_id) -> dict:
-    preds, gts = [], []
-    n_total = n_parsed = 0
-    for sid, rec in samples.items():
-        if sid not in gt_by_id:
-            continue
-        n_total += 1
-        parsed = parser.parse(rec["raw_response"])
-        v = parsed["q5_gripper_to_target"]
+        v = parsed.get("q3_gripper_to_target")
         if v is None or any(x is None for x in v):
             continue
         preds.append(v)
@@ -301,7 +263,8 @@ def _score_q5(parser, samples, gt_by_id) -> dict:
     return m
 
 
-def _score_q6(parser, samples, gt_by_id) -> dict:
+def _score_q4(parser, samples, gt_by_id) -> dict:
+    """Q4: spatial relation classification."""
     preds, gts = [], []
     n_total = n_parsed = 0
     for sid, rec in samples.items():
@@ -309,7 +272,7 @@ def _score_q6(parser, samples, gt_by_id) -> dict:
             continue
         n_total += 1
         parsed = parser.parse(rec["raw_response"])
-        v = parsed["q6_spatial_relation"]
+        v = parsed.get("q4_spatial_relation")
         if v is None or any(v.get(ax) is None for ax in ("x", "y", "z")):
             continue
         preds.append(v)
@@ -322,6 +285,143 @@ def _score_q6(parser, samples, gt_by_id) -> dict:
     return m
 
 
+def _score_q5(parser, samples, gt_by_id) -> dict:
+    """Q5: pairwise distance (scalar)."""
+    preds, gts = [], []
+    n_total = n_parsed = 0
+    for sid, rec in samples.items():
+        if sid not in gt_by_id:
+            continue
+        n_total += 1
+        parsed = parser.parse(rec["raw_response"])
+        pred_dict = parsed.get("q5_pairwise_distance")
+        gt_dict = gt_by_id[sid]["gt"].get("pairwise_distance")
+        if not isinstance(pred_dict, dict) or not isinstance(gt_dict, dict):
+            continue
+        pred_d = pred_dict.get("distance_m")
+        gt_d = gt_dict.get("distance_m")
+        if pred_d is None or gt_d is None:
+            continue
+        preds.append(float(pred_d))
+        gts.append(float(gt_d))
+        n_parsed += 1
+    m = scalar_metrics(preds, gts)
+    m["n_total"] = n_total
+    m["n_parsed"] = n_parsed
+    m["parse_rate"] = n_parsed / max(1, n_total)
+    return m
+
+
+def _score_q6(parser, samples, gt_by_id) -> dict:
+    """Q6: EE orientation (euler degrees)."""
+    def _safe_list(val):
+        if isinstance(val, (list, tuple)) and len(val) == 3:
+            return [float(v) for v in val]
+        return None
+
+    pred_euler, gt_euler = [], []
+    pred_quat, gt_quat = [], []
+    n_total = n_parsed = 0
+    for sid, rec in samples.items():
+        if sid not in gt_by_id:
+            continue
+        n_total += 1
+        parsed = parser.parse(rec["raw_response"])
+        pred_e = _safe_list(parsed.get("q6_eef_orientation_euler"))
+        gt_e = _safe_list(gt_by_id[sid]["gt"].get("eef_orientation_euler_deg"))
+        if pred_e is None or gt_e is None:
+            continue
+        pred_euler.append(pred_e)
+        gt_euler.append(gt_e)
+        n_parsed += 1
+        gt_q = gt_by_id[sid]["gt"].get("eef_orientation_quat")
+        if gt_q:
+            gt_quat.append(gt_q)
+            from bench.gt_extractor import euler_deg_to_quat_wxyz
+            pred_quat.append(euler_deg_to_quat_wxyz(pred_e))
+    m = angular_metrics(
+        pred_euler, gt_euler,
+        pred_quat if pred_quat else None,
+        gt_quat if gt_quat else None,
+    )
+    m["n_total"] = n_total
+    m["n_parsed"] = n_parsed
+    m["parse_rate"] = n_parsed / max(1, n_total)
+    return m
+
+
+def _score_q7(parser, samples, gt_by_id) -> dict:
+    """Q7: gripper openness (scalar)."""
+    preds, gts = [], []
+    n_total = n_parsed = 0
+    for sid, rec in samples.items():
+        if sid not in gt_by_id:
+            continue
+        n_total += 1
+        parsed = parser.parse(rec["raw_response"])
+        pred_v = parsed.get("q7_gripper_openness")
+        gt_v = gt_by_id[sid]["gt"].get("gripper_openness")
+        if pred_v is None or gt_v is None:
+            continue
+        preds.append(float(pred_v))
+        gts.append(float(gt_v))
+        n_parsed += 1
+    m = scalar_metrics(preds, gts)
+    m["n_total"] = n_total
+    m["n_parsed"] = n_parsed
+    m["parse_rate"] = n_parsed / max(1, n_total)
+    return m
+
+
+def _score_q8(parser, samples, gt_by_id) -> dict:
+    """Q8: 7D next action [dx,dy,dz,droll,dpitch,dyaw,gripper]."""
+    gt_q8, pred_q8 = [], []
+    n_total = n_parsed = 0
+    for sid, rec in samples.items():
+        if sid not in gt_by_id:
+            continue
+        n_total += 1
+        parsed = parser.parse(rec["raw_response"])
+        pred_val = parsed.get("q8_next_action")
+        gt_val = gt_by_id[sid]["gt"].get("demo_action")
+        pred_list = None
+        if isinstance(pred_val, dict):
+            tr = pred_val.get("translation")
+            ro = pred_val.get("rotation")
+            gr = pred_val.get("gripper")
+            if (
+                isinstance(tr, (list, tuple)) and len(tr) == 3
+                and isinstance(ro, (list, tuple)) and len(ro) == 3
+                and gr is not None
+            ):
+                pred_list = [float(v) for v in tr] + [float(v) for v in ro] + [float(gr)]
+        if (
+            isinstance(gt_val, (list, tuple)) and len(gt_val) == 7
+            and pred_list is not None
+        ):
+            gt_q8.append([float(v) for v in gt_val])
+            pred_q8.append(pred_list)
+            n_parsed += 1
+
+    n = len(gt_q8)
+    if n == 0:
+        return {"n": 0, "n_total": n_total, "n_parsed": 0, "parse_rate": 0.0}
+    gt_arr = np.array(gt_q8)
+    pr_arr = np.array(pred_q8)
+    ae = np.abs(pr_arr - gt_arr)
+    comp_names = ["dx", "dy", "dz", "droll", "dpitch", "dyaw", "gripper"]
+    m: dict = {"n": n, "n_total": n_total, "n_parsed": n_parsed,
+               "parse_rate": n_parsed / max(1, n_total)}
+    for i, name in enumerate(comp_names):
+        m[f"mae_{name}"] = float(np.mean(ae[:, i]))
+    m["mae_translation"] = float(np.mean(ae[:, :3]))
+    m["mae_rotation"] = float(np.mean(ae[:, 3:6]))
+    gt_sign = gt_arr[:, 6] > 0
+    pr_sign = pr_arr[:, 6] > 0
+    m["gripper_accuracy"] = float(np.mean(gt_sign == pr_sign))
+    return m
+
+
 # ---------------------------------------------------------------------------
 # Per-dim primary metric extraction (for the headline table)
 # ---------------------------------------------------------------------------
@@ -331,20 +431,24 @@ PRIMARY = {
     "q1":      ("mae_overall",      True),
     "q1_dest": ("mae_overall",      True),
     "q2":      ("mae_overall",      True),
-    "q3":      ("accuracy",         False),
-    "q4":      ("mean_cosine_sim",  False),
-    "q5":      ("mae_overall",      True),
-    "q6":      ("acc_all",          False),
+    "q3":      ("mae_overall",      True),
+    "q4":      ("acc_all",          False),
+    "q5":      ("mae",              True),
+    "q6":      ("mae_overall_deg",  True),
+    "q7":      ("mae",              True),
+    "q8":      ("mae_translation",  True),
 }
 
 SECONDARY = {
     "q1":      "rmse_overall",
     "q1_dest": "rmse_overall",
     "q2":      "rmse_overall",
-    "q3":      "f1",
-    "q4":      "median_cosine_sim",
-    "q5":      "rmse_overall",
-    "q6":      "f1_x",   # show one of the per-axis F1s; full breakdown lives in JSON
+    "q3":      "rmse_overall",
+    "q4":      "f1_x",   # show one of the per-axis F1s; full breakdown lives in JSON
+    "q5":      "rmse",
+    "q6":      "geodesic_mean_deg",
+    "q7":      "rmse",
+    "q8":      "gripper_accuracy",
 }
 
 
@@ -400,6 +504,8 @@ def main() -> None:
         "q4":      lambda s: _score_q4(parser, s, gt_by_id),
         "q5":      lambda s: _score_q5(parser, s, gt_by_id),
         "q6":      lambda s: _score_q6(parser, s, gt_by_id),
+        "q7":      lambda s: _score_q7(parser, s, gt_by_id),
+        "q8":      lambda s: _score_q8(parser, s, gt_by_id),
     }
 
     # Score base on every dim
@@ -433,7 +539,7 @@ def main() -> None:
 
     # ---- Build the headline table ---------------------------------------
     rows = []
-    headline_dims = ["q1", "q1_dest", "q2", "q3", "q4", "q5", "q6"]
+    headline_dims = ["q1", "q1_dest", "q2", "q3", "q4", "q5", "q6", "q7", "q8"]
     for d in headline_dims:
         b = base_results.get(d, {})
         l = lora_results.get(d, {})
@@ -497,10 +603,12 @@ def main() -> None:
     md_lines.append("### Notes")
     md_lines.append("- ✓ marks an improvement (LoRA better than base on the primary metric).")
     md_lines.append("- ✗ marks a regression.")
-    md_lines.append("- Q3 is binary (yes/no can_close); accuracy / F1 are higher-better.")
-    md_lines.append("- Q4 is unit-vector cosine similarity (range [-1, 1]); higher is better.")
-    md_lines.append("- Q1/Q1_dest/Q2/Q5 are 3D positions/offsets in meters; MAE / RMSE are lower-better.")
-    md_lines.append("- Q6 is per-axis categorical; `acc_all` is the strict-all-3-axes accuracy.")
+    md_lines.append("- Q1/Q1_dest/Q2/Q3 are 3D positions/offsets in meters; MAE / RMSE are lower-better.")
+    md_lines.append("- Q4 is per-axis categorical; `acc_all` is the strict-all-3-axes accuracy (higher is better).")
+    md_lines.append("- Q5 is pairwise distance in meters; MAE is lower-better.")
+    md_lines.append("- Q6 is EE orientation in degrees; MAE is lower-better.")
+    md_lines.append("- Q7 is gripper openness [0,1]; MAE is lower-better.")
+    md_lines.append("- Q8 is 7D next action; translation MAE is lower-better, gripper accuracy is higher-better.")
     md_lines.append("- Parse rate = fraction of samples where the model emitted a parseable value for the dim.")
     md_lines.append("")
     md_lines.append("## Full per-dim results (incl. per-axis breakdown)")

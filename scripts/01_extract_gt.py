@@ -16,12 +16,12 @@ Demo files are auto-downloaded from HuggingFace if not found locally.
 Usage
 -----
   # Extract 50 frames from 1 demo per task in libero_10
+  
   python scripts/01_extract_gt.py \
-      --suite libero_10 \
-      --task_ids 0 \
+      --suite all \
       --n_traj_frames 50 \
-      --n_demos 1 \
-      --out_dir data/gt-demo
+      --n_demos 10 \
+      --out_dir data/gt-demo-libero-all-suite-train-fix
 
   # Extract from all suites, 3 demos each, 20 frames
   python scripts/01_extract_gt.py \
@@ -71,9 +71,12 @@ from PIL import Image
 from tqdm import tqdm
 
 from bench.gt_extractor import (
-    compute_grasp_success,
-    compute_gripper_phases,
+    check_finger_contact,
+    compute_gripper_phase,
+    compute_release_windows,
+    extract_eef_pose_7d,
     extract_gt_from_obs,
+    get_robot_base_pos,
     get_views,
     get_sim_from_env,
 )
@@ -107,7 +110,7 @@ def parse_args() -> argparse.Namespace:
                        "Directory containing demo HDF5 files (e.g. libero_10/*.hdf5). "
                        "If not found, auto-downloads from HuggingFace."
                    ))
-    p.add_argument("--n_demos", type=int, default=1,
+    p.add_argument("--n_demos", type=int, default=50,
                    help=(
                        "Number of demonstration episodes to replay per task "
                        "(each HDF5 has ~50 demos). (default: 1)"
@@ -239,13 +242,60 @@ def extract_demo_traj_frames(
     if traj_len == 0:
         return []
 
-    # Pre-compute gripper phase and grasp success for every timestep.
-    # Uses close-segment duration to distinguish successful grasps from
-    # failed attempts — no need for sim state / finger qpos.
-    gripper_phases = compute_gripper_phases(actions)
-    grasp_success = compute_grasp_success(actions)
+    # Pre-compute release windows from full action sequence
+    release_windows = compute_release_windows(actions)
 
-    # Uniform sampling: always include first and last frame
+    # ── Pre-compute keyframe poses (initial, grasp, release) ─────────
+    # Find grasp transitions (-1→+1) and release transitions (+1→-1)
+    gripper_cmds = actions[:, 6]
+    grasp_steps = []   # steps where action[6] goes -1 → +1
+    release_steps = [] # steps where action[6] goes +1 → -1
+    for t in range(1, traj_len):
+        if gripper_cmds[t - 1] < 0 and gripper_cmds[t] > 0:
+            grasp_steps.append(t)
+        elif gripper_cmds[t - 1] > 0 and gripper_cmds[t] < 0:
+            release_steps.append(t)
+
+    # Extract 7D poses at keyframes by restoring sim state
+    env.reset()
+    sim = get_sim_from_env(env)
+
+    def _pose_at_step(step: int) -> dict:
+        obs = env.set_init_state(states[step])
+        s = get_sim_from_env(env)
+        base = get_robot_base_pos(s)
+        return extract_eef_pose_7d(obs, s, base)
+
+    initial_eef_pose = _pose_at_step(0)
+
+    grasp_poses = []
+    for t in grasp_steps:
+        grasp_poses.append({"step": t, "pose": _pose_at_step(t)})
+
+    release_poses = []
+    for t in release_steps:
+        release_poses.append({"step": t, "pose": _pose_at_step(t)})
+
+    # Build ordered list of keyframe targets for next_target_pose lookup:
+    # grasp_0, release_0, grasp_1, release_1, ...
+    keyframes = []
+    gi, ri = 0, 0
+    while gi < len(grasp_steps) or ri < len(release_steps):
+        if gi < len(grasp_steps) and (ri >= len(release_steps) or grasp_steps[gi] <= release_steps[ri]):
+            keyframes.append(("grasp", grasp_steps[gi], grasp_poses[gi]["pose"]))
+            gi += 1
+        else:
+            keyframes.append(("release", release_steps[ri], release_poses[ri]["pose"]))
+            ri += 1
+
+    def _next_target_pose(step: int) -> dict | None:
+        """Find the next keyframe pose after the given step."""
+        for kf_type, kf_step, kf_pose in keyframes:
+            if kf_step > step:
+                return {"type": kf_type, "step": kf_step, "pose": kf_pose}
+        return None  # past all keyframes (task finishing)
+
+    # ── Uniform sampling ─────────────────────────────────────────────
     n_sample = min(n_frames, traj_len)
     sample_indices = np.linspace(0, traj_len - 1, n_sample, dtype=int)
 
@@ -259,33 +309,43 @@ def extract_demo_traj_frames(
 
     sampled = []
     try:
-        env.reset()
-
         for idx in unique_indices:
             # Restore full simulator state at this timestep
             raw_obs = env.set_init_state(states[idx])
             sim = get_sim_from_env(env)
 
-            gt = extract_gt_from_obs(raw_obs, sim, task_description)
+            gt = extract_gt_from_obs(raw_obs, sim, task_description, env=env)
             images = get_views(raw_obs)
 
-            # Add demo-specific fields
+            # ── Demo-specific fields ─────────────────────────────────
             if idx < len(actions):
                 gt["demo_action"] = actions[idx].tolist()
-            gt["gripper_phase"] = gripper_phases[idx]
-            # grasp_success: True if this close-segment leads to a real grasp,
-            # False if it's a failed attempt, None if not in a close-segment.
-            gt["grasp_success"] = grasp_success[idx]
-            # can_close: True only for successful grasps and carrying.
-            #   carrying → always True
-            #   grasping + grasp_success=True → True (will succeed)
-            #   grasping + grasp_success=False → False (failed attempt)
-            #   approaching/releasing → False
-            phase = gripper_phases[idx]
-            gt["can_close"] = (
-                phase == "carrying"
-                or (phase == "grasping" and grasp_success[idx] is True)
-            )
+
+            # Check physical finger contact from sim
+            is_grasping, grasped_geom = check_finger_contact(sim)
+            gt["finger_contact"] = is_grasping
+            gt["grasped_object"] = grasped_geom
+
+            # can_close: directly from demo action command
+            action = actions[idx] if idx < len(actions) else np.zeros(7)
+            gt["can_close"] = bool(action[6] > 0)
+
+            # gripper_phase from action + contact
+            if idx in release_windows:
+                phase = "releasing"
+            elif action[6] < 0:
+                phase = "approaching"
+            elif is_grasping:
+                phase = "carrying"
+            else:
+                phase = "grasping"
+            gt["gripper_phase"] = phase
+
+            # Keyframe poses
+            gt["initial_eef_pose"] = initial_eef_pose
+            gt["grasp_poses"] = grasp_poses
+            gt["release_poses"] = release_poses
+            gt["next_target_pose"] = _next_target_pose(idx)
 
             sampled.append((gt, images, idx, traj_len))
 

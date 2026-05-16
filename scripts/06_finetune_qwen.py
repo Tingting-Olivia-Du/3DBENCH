@@ -16,16 +16,28 @@ attention/MLP projections (q/k/v/o/gate/up/down). This is the "safe" recipe
 for small datasets and matches the plan in
 /root/.claude/plans/libero-qa-...md.
 
+Validation is run periodically during training (controlled by --eval_steps
+or at each epoch end). Train & val loss curves are logged to Weights & Biases
+when --wandb is enabled (requires `source /workspace/tingting/.wandb/env.sh`
+beforehand, or setting WANDB_API_KEY / WANDB_PROJECT env vars).
+
 Usage
 -----
+  # Source W&B credentials first
+cd 3DBENCH
+conda activate /workspace/tingting/envs/vlmbench
+
+  source /workspace/tingting/.wandb/env.sh
+
   python scripts/06_finetune_qwen.py \\
       --dim q3 \\
       --train_jsonl data/finetune-mv/q3/train.jsonl \\
       --val_jsonl   data/finetune-mv/q3/val.jsonl \\
       --data_root   data \\
-      --base_model  /umd-datapool/tingting/models/Qwen2.5-VL-3B-Instruct \\
+      --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \\
       --output_dir  models/qwen2.5-vl-3b-mv-lora/q3 \\
-      --epochs 3 --per_device_batch_size 1 --grad_accum 8 --lr 1e-4
+      --epochs 10 --per_device_batch_size 1 --grad_accum 8 --lr 1e-4 \\
+      --wandb --wandb_project 3dbench-finetune
 
   # quick smoke (3 steps, no eval)
   python scripts/06_finetune_qwen.py --dim q3 \\
@@ -33,6 +45,161 @@ Usage
       --val_jsonl   /tmp/finetune_mini/q3/val.jsonl \\
       --output_dir  /tmp/lora_mv_test_q3 \\
       --max_steps 3
+
+
+# 每 100 步 eval 一次，曲线比较平滑
+python scripts/06_finetune_qwen.py \
+    --dim q3 \
+    --train_jsonl data/finetune-0515/q3/train.jsonl \
+    --val_jsonl   data/finetune-0515/q3/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/qwen2.5-vl-3b-mv-lora/q3 \
+    --epochs 3 --per_device_batch_size 1 --grad_accum 8 --lr 1e-4 \
+    --eval_steps 100 \
+    --gpu 0 --wandb --wandb_project 3dbench-finetune
+
+      
+
+
+
+# Q1
+python scripts/06_finetune_qwen.py \
+    --dim q1 \
+    --train_jsonl data/finetune-0515/q1/train.jsonl \
+    --val_jsonl   data/finetune-0515/q1/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q1 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+
+source /workspace/tingting/.wandb/env.sh
+# Q2
+python scripts/06_finetune_qwen.py \
+    --dim q2 \
+    --train_jsonl data/finetune-0515/q2/train.jsonl \
+    --val_jsonl   data/finetune-0515/q2/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q2 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+
+source /workspace/tingting/.wandb/env.sh
+# Q3
+python scripts/06_finetune_qwen.py \
+    --dim q3 \
+    --train_jsonl data/finetune-0515/q3/train.jsonl \
+    --val_jsonl   data/finetune-0515/q3/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q3 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+# Q4
+source /workspace/tingting/.wandb/env.sh
+
+python scripts/06_finetune_qwen.py \
+    --dim q4 \
+    --train_jsonl data/finetune-0515/q4/train.jsonl \
+    --val_jsonl   data/finetune-0515/q4/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q4 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+# Q5
+source /workspace/tingting/.wandb/env.sh
+
+python scripts/06_finetune_qwen.py \
+    --dim q5 \
+    --train_jsonl data/finetune-0515/q5/train.jsonl \
+    --val_jsonl   data/finetune-0515/q5/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q5 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+# Q6
+
+source /workspace/tingting/.wandb/env.sh
+
+python scripts/06_finetune_qwen.py \
+    --dim q6 \
+    --train_jsonl data/finetune-0515/q6/train.jsonl \
+    --val_jsonl   data/finetune-0515/q6/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q6 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+# Q7
+
+source /workspace/tingting/.wandb/env.sh
+
+python scripts/06_finetune_qwen.py \
+    --dim q7 \
+    --train_jsonl data/finetune-0515/q7/train.jsonl \
+    --val_jsonl   data/finetune-0515/q7/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q7 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
+# Q8
+
+source /workspace/tingting/.wandb/env.sh
+
+python scripts/06_finetune_qwen.py \
+    --dim q8 \
+    --train_jsonl data/finetune-0515/q8/train.jsonl \
+    --val_jsonl   data/finetune-0515/q8/val.jsonl \
+    --data_root   data \
+    --base_model  /workspace/tingting/models/Qwen2.5-VL-3B-Instruct \
+    --output_dir  models/0515/qwen2.5-vl-3b-mv-lora/q8 \
+    --epochs 3 \
+    --per_device_batch_size 1 \
+    --grad_accum 4 \
+    --lr 1e-4 \
+    --eval_steps 200 --save_steps 2000 \
+    --gpu 4 --wandb --wandb_project 3dbench-finetune-separate-fix
+
 """
 from __future__ import annotations
 
@@ -52,8 +219,9 @@ from PIL import Image
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--dim", required=True, choices=["q1", "q2", "q3", "q4", "q5", "q6"],
-                   help="Which dimension this adapter targets.")
+    p.add_argument("--dim", required=True,
+                   choices=["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "all"],
+                   help="Which dimension this adapter targets. 'all' = all Q1-Q8 in one adapter.")
     p.add_argument("--train_jsonl", required=True)
     p.add_argument("--val_jsonl", required=True)
     p.add_argument("--data_root", default="data",
@@ -89,6 +257,22 @@ def parse_args() -> argparse.Namespace:
                    help="If > 0, save a checkpoint every N steps. 0 = save at epoch end only.")
     p.add_argument("--eval_steps", type=int, default=0,
                    help="If > 0, evaluate every N steps. 0 = evaluate at epoch end only.")
+
+    # W&B
+    p.add_argument("--wandb", action="store_true", default=False,
+                   help="Enable Weights & Biases logging. Requires WANDB_API_KEY env var.")
+    p.add_argument("--wandb_project", type=str, default=None,
+                   help="W&B project name. Defaults to WANDB_PROJECT env var or '3dbench-finetune'.")
+    p.add_argument("--wandb_run_name", type=str, default=None,
+                   help="W&B run name. Defaults to '<dim>_r<rank>_lr<lr>'.")
+    p.add_argument("--wandb_entity", type=str, default=None,
+                   help="W&B entity (team/user). Defaults to WANDB_ENTITY env var.")
+
+    # GPU
+    p.add_argument("--gpu", type=str, default=None,
+                   help="Comma-separated GPU ids to use (e.g. '0', '2,3'). "
+                        "Sets CUDA_VISIBLE_DEVICES before model loading. "
+                        "Default: use all visible GPUs.")
     return p.parse_args()
 
 
@@ -202,6 +386,11 @@ def main() -> None:
     args = parse_args()
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
+    # ── GPU selection (must happen before any CUDA init) ──
+    if args.gpu is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+        print(f"CUDA_VISIBLE_DEVICES={args.gpu}")
+
     # Heavy imports deferred so --help is fast and import errors are visible.
     from transformers import (
         AutoProcessor,
@@ -210,6 +399,39 @@ def main() -> None:
         TrainingArguments,
     )
     from peft import LoraConfig, get_peft_model
+
+    # ── W&B setup ──
+    if args.wandb:
+        import wandb
+        wandb_project = args.wandb_project or os.environ.get("WANDB_PROJECT", "3dbench-finetune")
+        wandb_entity = args.wandb_entity or os.environ.get("WANDB_ENTITY", None)
+        wandb_run_name = args.wandb_run_name or f"{args.dim}_r{args.lora_rank}_lr{args.lr}"
+        # Override env vars so HF Trainer doesn't clobber our wandb.init() settings
+        os.environ["WANDB_PROJECT"] = wandb_project
+        if wandb_entity:
+            os.environ["WANDB_ENTITY"] = wandb_entity
+        wandb.init(
+            project=wandb_project,
+            entity=wandb_entity,
+            name=wandb_run_name,
+            config={
+                "dim": args.dim,
+                "base_model": args.base_model_hub_id,
+                "lora_rank": args.lora_rank,
+                "lora_alpha": args.lora_alpha,
+                "lora_dropout": args.lora_dropout,
+                "epochs": args.epochs,
+                "max_steps": args.max_steps,
+                "lr": args.lr,
+                "per_device_batch_size": args.per_device_batch_size,
+                "grad_accum": args.grad_accum,
+                "warmup_ratio": args.warmup_ratio,
+                "weight_decay": args.weight_decay,
+                "max_seq_len": args.max_seq_len,
+                "seed": args.seed,
+            },
+        )
+        print(f"W&B initialized: project={wandb_project}  run={wandb_run_name}")
 
     print(f"Loading base model: {args.base_model}")
     print(f"  (will record base_model = {args.base_model_hub_id} in adapter metadata)")
@@ -259,10 +481,20 @@ def main() -> None:
     collator = make_collator(processor, max_seq_len=args.max_seq_len)
 
     # ── TrainingArguments ──
-    save_strategy = "steps" if args.save_steps > 0 else "epoch"
+    # save and eval strategy must match when load_best_model_at_end=True.
+    # If user sets --eval_steps but not --save_steps, auto-align save to eval.
     eval_strategy = "steps" if args.eval_steps > 0 else "epoch"
+    if args.save_steps > 0:
+        save_strategy = "steps"
+    elif args.eval_steps > 0:
+        save_strategy = "steps"  # align with eval
+        args.save_steps = args.eval_steps
+    else:
+        save_strategy = "epoch"
+    report_to = ["wandb"] if args.wandb else []
     targs = TrainingArguments(
         output_dir=args.output_dir,
+        run_name=(args.wandb_run_name or f"{args.dim}_r{args.lora_rank}_lr{args.lr}") if args.wandb else None,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
         per_device_train_batch_size=args.per_device_batch_size,
@@ -283,7 +515,7 @@ def main() -> None:
         greater_is_better=False,
         seed=args.seed,
         remove_unused_columns=False,
-        report_to=[],   # no wandb/tb — we'll add it later if needed
+        report_to=report_to,
         ddp_find_unused_parameters=False,
         dataloader_num_workers=2,
     )
@@ -305,7 +537,7 @@ def main() -> None:
     trainer.model.save_pretrained(final_dir)
     processor.save_pretrained(final_dir)
     # Also drop a small metadata file so 02_run_vlm_eval.py knows the dim.
-    (final_dir / "adapter_meta.json").write_text(json.dumps({
+    meta = {
         "dim": args.dim,
         "base_model": args.base_model_hub_id,
         "base_model_local_path": args.base_model,
@@ -313,8 +545,17 @@ def main() -> None:
         "lora_alpha": args.lora_alpha,
         "train_jsonl": args.train_jsonl,
         "val_jsonl": args.val_jsonl,
-    }, indent=2))
+    }
+    if args.wandb:
+        import wandb
+        meta["wandb_run_id"] = wandb.run.id if wandb.run else None
+        meta["wandb_run_url"] = wandb.run.url if wandb.run else None
+    (final_dir / "adapter_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"Saved LoRA adapter → {final_dir}")
+
+    if args.wandb:
+        import wandb
+        wandb.finish()
 
 
 if __name__ == "__main__":

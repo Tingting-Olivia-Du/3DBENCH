@@ -1,19 +1,31 @@
 """Parse VLM text responses into structured ground-truth-comparable dicts.
 
-Expected VLM output (single JSON object):
+Expected VLM output (single JSON object) — new numbering:
   {
-    "q1": {"x": float, "y": float, "z": float},   # target object position
-    "q2": {"x": float, "y": float, "z": float},   # gripper position
-    "q3": {"can_close": "yes"|"no"},               # gripper close label
-    "q4": {"dx": float, "dy": float, "dz": float}, # next move direction (unit vector)
-    "q5": {"dx": float, "dy": float, "dz": float}, # gripper→target offset (not normalized)
-    "q6": {"x": str, "y": str, "z": str},          # axis-wise spatial relation labels
-    "q7": {"roll": float, "pitch": float, "yaw": float},  # EE orientation (degrees)
-    "q8": {"roll": float, "pitch": float, "yaw": float},  # target orientation (degrees)
-    "q9": {"roll": float, "pitch": float, "yaw": float},  # relative rotation (degrees)
-    "q10": {"object_a": str, "object_b": str, "distance_m": float},  # pairwise distance
-    "q11": {"openness": float}                     # gripper openness [0,1]
+    "q1": {"x": float, "y": float, "z": float},            # source object position
+    "q1_dest": {"x": float, "y": float, "z": float},       # destination position
+    "q2": {"x": float, "y": float, "z": float},            # gripper position
+    "q3": {"dx": float, "dy": float, "dz": float},         # gripper→target offset
+    "q4": {"x": str, "y": str, "z": str},                  # spatial relation labels
+    "q5": {"object_a": str, "object_b": str, "distance_m": float},  # pairwise distance
+    "q6": {"roll": float, "pitch": float, "yaw": float},   # EE orientation (degrees)
+    "q7": {"openness": float},                              # gripper openness [0,1]
+    "q8": {"dx": float, "dy": float, "dz": float,          # next action (7D)
+           "droll": float, "dpitch": float, "dyaw": float,
+           "gripper": float}
   }
+
+Mapping from old → new numbering:
+  Q1      = Q1  (source object position)
+  Q1_dest = Q1_dest (destination position)
+  Q2      = Q2  (gripper position)
+  Q3      = old Q5  (gripper-to-target offset)
+  Q4      = old Q6  (spatial relationship)
+  Q5      = old Q10 (pairwise object distance)
+  Q6      = old Q7  (EE orientation)
+  Q7      = old Q11 (gripper openness)
+  Q8      = new     (next action, 7D demo action)
+  Removed: old Q3 (can_close), old Q8 (target orientation), old Q9 (relative rotation)
 
 The parser is lenient: it tolerates markdown code fences, alternative key
 names, and partial responses.
@@ -75,41 +87,8 @@ def _parse_xyz(data: Any) -> list[float] | None:
         return None
 
 
-def _parse_direction(data: Any) -> list[float] | None:
-    """Parse {"dx": ..., "dy": ..., "dz": ...} → normalized [dx, dy, dz]."""
-    if not isinstance(data, dict):
-        return None
-    try:
-        vec = np.array([float(data["dx"]), float(data["dy"]), float(data["dz"])], dtype=float)
-    except (KeyError, TypeError, ValueError):
-        return None
-    norm = float(np.linalg.norm(vec))
-    if norm < 1e-8:
-        return None
-    return (vec / norm).tolist()
-
-
-def _parse_can_close(data: Any) -> bool | None:
-    """Parse {"can_close": "yes"|"no"} → bool."""
-    if isinstance(data, dict):
-        val = data.get("can_close")
-    else:
-        val = data
-
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, (int, float)):
-        return bool(val)
-    if isinstance(val, str):
-        return val.strip().lower() in {"yes", "true", "1"}
-    return None
-
-
 def _parse_delta(data: Any) -> list[float] | None:
-    """Parse {"dx": ..., "dy": ..., "dz": ...} → [dx, dy, dz] without normalizing.
-
-    Used for Q5 (gripper-to-target offset), unlike Q4 which normalizes.
-    """
+    """Parse {"dx": ..., "dy": ..., "dz": ...} → [dx, dy, dz] without normalizing."""
     if not isinstance(data, dict):
         return None
     try:
@@ -118,12 +97,12 @@ def _parse_delta(data: Any) -> list[float] | None:
         return None
 
 
-# Valid label sets for Q6 spatial relation parsing
+# Valid label sets for Q4 spatial relation parsing
 _X_LABELS = {"in_front", "behind", "aligned_x"}
 _Y_LABELS = {"left", "right", "aligned_y"}
 _Z_LABELS = {"above", "below", "aligned_z"}
 
-# Alias normalization for Q6: map common VLM alternatives to canonical labels
+# Alias normalization for Q4: map common VLM alternatives to canonical labels
 _X_ALIASES: dict[str, str] = {
     "forward": "in_front", "front": "in_front", "ahead": "in_front",
     "backward": "behind", "back": "behind",
@@ -216,6 +195,24 @@ def _parse_openness(data: Any) -> float | None:
         return None
 
 
+def _parse_action_7d(data: Any) -> dict | None:
+    """Parse 7D action: {"dx","dy","dz","droll","dpitch","dyaw","gripper"}.
+
+    Returns dict with keys: translation [dx,dy,dz], rotation [droll,dpitch,dyaw],
+    gripper float.
+    """
+    if not isinstance(data, dict):
+        return None
+    try:
+        return {
+            "translation": [float(data["dx"]), float(data["dy"]), float(data["dz"])],
+            "rotation": [float(data["droll"]), float(data["dpitch"]), float(data["dyaw"])],
+            "gripper": float(data["gripper"]),
+        }
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 # ----- Top-level resolver ----------------------------------------------
 
 def _resolve_subfield(top: dict, primary_key: str, alt_keys: tuple[str, ...]) -> Any:
@@ -229,24 +226,35 @@ def _resolve_subfield(top: dict, primary_key: str, alt_keys: tuple[str, ...]) ->
 
 
 class ResponseParser:
-    """Parse a single VLM response string into a structured answer dict."""
+    """Parse a single VLM response string into a structured answer dict.
+
+    New Q numbering (v2):
+      Q1      source object position
+      Q1_dest destination position
+      Q2      gripper position
+      Q3      gripper-to-target offset
+      Q4      spatial relation (language)
+      Q5      pairwise object distance
+      Q6      EE orientation (euler)
+      Q7      gripper openness
+      Q8      next action (7D)
+    """
 
     def parse(self, response_text: str) -> dict:
         """Return a dict with keys:
 
         raw                           – original response string
-        parsed_ok                     – bool, True if at least one field was successfully parsed
+        parsed_ok                     – bool
+        task_type                     – str or None
         q1_object_pos                 – [x, y, z] or None
+        q1_dest_pos                   – [x, y, z] or None
         q2_gripper_pos                – [x, y, z] or None
-        q3_can_close                  – bool or None
-        q4_next_dir                   – [dx, dy, dz] (unit vector) or None
-        q5_gripper_to_target          – [dx, dy, dz] (raw offset, not normalized) or None
-        q6_spatial_relation           – {"x": str, "y": str, "z": str} or None
-        q7_eef_orientation_euler      – [roll, pitch, yaw] degrees or None
-        q8_object_orientation_euler   – [roll, pitch, yaw] degrees or None
-        q9_relative_rotation_euler    – [roll, pitch, yaw] degrees or None
-        q10_pairwise_distance         – {"object_a", "object_b", "distance_m"} or None
-        q11_gripper_openness          – float in [0,1] or None
+        q3_gripper_to_target          – [dx, dy, dz] or None
+        q4_spatial_relation           – {"x": str, "y": str, "z": str} or None
+        q5_pairwise_distance          – {"object_a", "object_b", "distance_m"} or None
+        q6_eef_orientation_euler      – [roll, pitch, yaw] degrees or None
+        q7_gripper_openness           – float in [0,1] or None
+        q8_next_action                – {"translation", "rotation", "gripper"} or None
         """
         result: dict = {
             "raw": response_text,
@@ -255,15 +263,12 @@ class ResponseParser:
             "q1_object_pos": None,
             "q1_dest_pos": None,
             "q2_gripper_pos": None,
-            "q3_can_close": None,
-            "q4_next_dir": None,
-            "q5_gripper_to_target": None,
-            "q6_spatial_relation": None,
-            "q7_eef_orientation_euler": None,
-            "q8_object_orientation_euler": None,
-            "q9_relative_rotation_euler": None,
-            "q10_pairwise_distance": None,
-            "q11_gripper_openness": None,
+            "q3_gripper_to_target": None,
+            "q4_spatial_relation": None,
+            "q5_pairwise_distance": None,
+            "q6_eef_orientation_euler": None,
+            "q7_gripper_openness": None,
+            "q8_next_action": None,
         }
 
         data = _extract_json_from_text(response_text)
@@ -282,10 +287,9 @@ class ResponseParser:
         )
         result["q1_object_pos"] = _parse_xyz(q1_raw)
 
-        # Q1_dest – destination position (None for articulation tasks)
+        # Q1_dest – destination position
         q1d_raw = _resolve_subfield(data, "q1_dest", ("destination", "dest_position", "place_position"))
         q1d = _parse_xyz(q1d_raw)
-        # If model explicitly returned nulls, treat as no destination
         if q1d is not None and all(v is None or (isinstance(v, float) and v != v) for v in q1d):
             q1d = None
         result["q1_dest_pos"] = q1d
@@ -297,46 +301,40 @@ class ResponseParser:
         )
         result["q2_gripper_pos"] = _parse_xyz(q2_raw)
 
-        # Q3 – can close
-        q3_raw = _resolve_subfield(data, "q3", ("can_close", "gripper_close"))
-        result["q3_can_close"] = _parse_can_close(q3_raw)
+        # Q3 – gripper-to-target offset (was old Q5)
+        q3_raw = _resolve_subfield(data, "q3", ("gripper_to_target", "relative_position", "delta",
+                                                  "q5",))  # fallback to old q5 key
+        result["q3_gripper_to_target"] = _parse_delta(q3_raw)
 
-        # Q4 – next direction (normalized unit vector)
-        q4_raw = _resolve_subfield(data, "q4", ("next_direction", "direction", "move_direction"))
-        result["q4_next_dir"] = _parse_direction(q4_raw)
+        # Q4 – spatial relation (was old Q6)
+        q4_raw = _resolve_subfield(data, "q4", ("spatial_relation", "relation", "spatial_relationship",
+                                                  "q6",))  # fallback to old q6 key
+        result["q4_spatial_relation"] = _parse_spatial_relation(q4_raw)
 
-        # Q5 – gripper-to-target offset vector (raw, not normalized)
-        q5_raw = _resolve_subfield(data, "q5", ("gripper_to_target", "relative_position", "delta"))
-        result["q5_gripper_to_target"] = _parse_delta(q5_raw)
+        # Q5 – pairwise distance (was old Q10)
+        q5_raw = _resolve_subfield(data, "q5", ("pairwise_distance", "object_distance",
+                                                  "q10",))  # fallback to old q10 key
+        result["q5_pairwise_distance"] = _parse_pairwise_distance(q5_raw)
 
-        # Q6 – axis-wise spatial relation labels
-        q6_raw = _resolve_subfield(data, "q6", ("spatial_relation", "relation", "spatial_relationship"))
-        result["q6_spatial_relation"] = _parse_spatial_relation(q6_raw)
+        # Q6 – EE orientation (was old Q7)
+        q6_raw = _resolve_subfield(data, "q6", ("eef_orientation", "gripper_orientation", "ee_orientation",
+                                                  "q7",))  # fallback to old q7 key
+        result["q6_eef_orientation_euler"] = _parse_euler(q6_raw)
 
-        # Q7 – EE orientation (euler degrees)
-        q7_raw = _resolve_subfield(data, "q7", ("eef_orientation", "gripper_orientation", "ee_orientation"))
-        result["q7_eef_orientation_euler"] = _parse_euler(q7_raw)
+        # Q7 – gripper openness (was old Q11)
+        q7_raw = _resolve_subfield(data, "q7", ("gripper_openness", "openness",
+                                                  "q11",))  # fallback to old q11 key
+        result["q7_gripper_openness"] = _parse_openness(q7_raw)
 
-        # Q8 – target object orientation (euler degrees)
-        q8_raw = _resolve_subfield(data, "q8", ("object_orientation", "target_orientation"))
-        result["q8_object_orientation_euler"] = _parse_euler(q8_raw)
-
-        # Q9 – relative rotation (euler degrees)
-        q9_raw = _resolve_subfield(data, "q9", ("relative_rotation", "rotation_delta"))
-        result["q9_relative_rotation_euler"] = _parse_euler(q9_raw)
-
-        # Q10 – pairwise distance
-        q10_raw = _resolve_subfield(data, "q10", ("pairwise_distance", "object_distance"))
-        result["q10_pairwise_distance"] = _parse_pairwise_distance(q10_raw)
-
-        # Q11 – gripper openness
-        q11_raw = _resolve_subfield(data, "q11", ("gripper_openness", "openness"))
-        result["q11_gripper_openness"] = _parse_openness(q11_raw)
+        # Q8 – next action 7D (new)
+        q8_raw = _resolve_subfield(data, "q8", ("next_action", "action", "demo_action",
+                                                  "q4",))  # fallback to old q4 key
+        result["q8_next_action"] = _parse_action_7d(q8_raw)
 
         result["parsed_ok"] = any(
             result[k] is not None
-            for k in ("q1_object_pos", "q2_gripper_pos", "q3_can_close", "q4_next_dir",
-                       "q7_eef_orientation_euler", "q8_object_orientation_euler",
-                       "q10_pairwise_distance", "q11_gripper_openness")
+            for k in ("q1_object_pos", "q2_gripper_pos", "q3_gripper_to_target",
+                       "q4_spatial_relation", "q6_eef_orientation_euler",
+                       "q7_gripper_openness", "q8_next_action")
         )
         return result

@@ -261,127 +261,264 @@ def compute_gripper_openness(
     return float(np.clip((raw_value - min_val) / (max_val - min_val), 0.0, 1.0))
 
 
-def compute_gripper_phases(
-    actions: np.ndarray,
-    min_hold_steps: int = 30,
-    window: int = 5,
-    **kwargs,
-) -> list[str]:
-    """Compute gripper phase for every timestep in a demo trajectory.
+def check_finger_contact(sim) -> tuple[bool, str | None]:
+    """Check if the gripper fingers are in contact with any object.
 
-    Uses the full actions array (T, 7) and close-segment duration to
-    distinguish successful grasps from failed attempts.
-
-    Phases:
-      "approaching"  – gripper open command, moving toward target
-      "grasping"     – in a close-segment that is too short to be a real
-                       grasp (failed attempt, < min_hold_steps)
-      "carrying"     – in a close-segment long enough to be a successful
-                       grasp (≥ min_hold_steps)
-      "releasing"    – transition region around close→open (for successful
-                       grasps only)
-
-    Args:
-        actions:          (T, 7) array of demo actions.
-        min_hold_steps:   Minimum close-segment length to count as a
-                          successful grasp. Default 30 (≈ 1.5s at 20Hz).
-        window:           Half-width for releasing transition zones.
+    Uses MuJoCo's contact data to detect whether both left and right
+    finger pads are touching the same object — the robosuite definition
+    of a successful grasp.
 
     Returns:
-        List of T phase strings, one per timestep.
+        (is_grasping, object_name):
+          - (True, "alphabet_soup_1_g6") if both fingers contact an object
+          - (False, None) if not grasping
     """
-    T = len(actions)
-    gripper_cmds = actions[:, 6]  # -1 = open, +1 = close
+    left_contacts: set[str] = set()
+    right_contacts: set[str] = set()
 
-    # Identify close-segments
-    segments: list[tuple[int, int, bool]] = []  # (start, end, is_success)
-    in_close = False
-    start = 0
-    for t in range(T):
-        if gripper_cmds[t] > 0 and not in_close:
-            start = t
-            in_close = True
-        elif gripper_cmds[t] < 0 and in_close:
-            success = (t - start) >= min_hold_steps
-            segments.append((start, t, success))
-            in_close = False
-    if in_close:
-        success = (T - start) >= min_hold_steps
-        segments.append((start, T, success))
+    for i in range(sim.data.ncon):
+        c = sim.data.contact[i]
+        if c.geom1 >= sim.model.ngeom or c.geom2 >= sim.model.ngeom:
+            continue
+        g1 = sim.model.geom_id2name(c.geom1) or ""
+        g2 = sim.model.geom_id2name(c.geom2) or ""
 
-    # Build release zones (only for successful grasps)
-    release_zone: set[int] = set()
-    for seg_start, seg_end, is_success in segments:
-        if is_success and seg_end < T:
-            for tt in range(max(0, seg_end - window), min(T, seg_end + window)):
-                release_zone.add(tt)
+        # Identify which is the finger and which is the object
+        for finger_geom, other_geom in [(g1, g2), (g2, g1)]:
+            if "finger" not in finger_geom:
+                continue
+            # Skip robot self-collision
+            if "finger" in other_geom or "gripper" in other_geom or "robot" in other_geom:
+                continue
+            if "finger1" in finger_geom:
+                left_contacts.add(other_geom)
+            elif "finger2" in finger_geom:
+                right_contacts.add(other_geom)
 
-    # Assign phases
-    # First, map each timestep to its segment info
-    seg_map: dict[int, tuple[int, int, bool]] = {}
-    for seg_start, seg_end, is_success in segments:
-        for t in range(seg_start, seg_end):
-            seg_map[t] = (seg_start, seg_end, is_success)
-
-    phases = [""] * T
-    for t in range(T):
-        if t in release_zone:
-            phases[t] = "releasing"
-        elif gripper_cmds[t] < 0:
-            phases[t] = "approaching"
-        elif t in seg_map:
-            _, _, is_success = seg_map[t]
-            phases[t] = "carrying" if is_success else "grasping"
-        else:
-            phases[t] = "approaching"
-
-    return phases
+    # Both fingers must contact at least one shared object
+    shared = left_contacts & right_contacts
+    if shared:
+        return True, sorted(shared)[0]
+    return False, None
 
 
-def compute_grasp_success(
-    actions: np.ndarray,
-    min_hold_steps: int = 30,
-    **kwargs,
-) -> list[bool | None]:
-    """For each timestep, determine if the current grasp attempt succeeds.
+def compute_gripper_phase(action: np.ndarray, is_grasping: bool, window_label: str | None = None) -> str:
+    """Compute gripper phase for a single timestep.
 
-    A successful grasp is a close-segment (contiguous run of action[6] > 0)
-    that lasts at least ``min_hold_steps`` steps. Short close-segments are
-    failed attempts where the operator tried to grasp but quickly released.
+    Args:
+        action:        (7,) action vector. action[6]: -1=open, +1=close.
+        is_grasping:   True if finger contact detected (from check_finger_contact).
+        window_label:  Optional override — "releasing" if in a release window.
 
-    At 20 Hz control frequency, 30 steps ≈ 1.5 seconds — a reasonable
-    minimum for pick-up + transport.
+    Returns:
+        One of: "approaching", "grasping", "carrying", "releasing".
+    """
+    if window_label == "releasing":
+        return "releasing"
+    if action[6] < 0:
+        return "approaching"
+    # action[6] > 0 (close command)
+    return "carrying" if is_grasping else "grasping"
 
-    Returns a list of T values:
-      - True:  this close-segment is long enough → successful grasp
-      - False: this close-segment is too short → failed attempt
-      - None:  not in a close-segment (action[6] < 0)
+
+def compute_release_windows(actions: np.ndarray, window: int = 5) -> set[int]:
+    """Find timesteps near close→open transitions (releasing zones).
+
+    Only marks transitions where the gripper was closed for a meaningful
+    duration (≥ 10 steps) to avoid marking failed-grasp releases.
+
+    Returns:
+        Set of timestep indices that fall in a release window.
     """
     T = len(actions)
     gripper_cmds = actions[:, 6]
+    release_steps: set[int] = set()
 
-    # Identify close-segments: contiguous runs of action[6] > 0
-    segments: list[tuple[int, int]] = []  # (start, end_exclusive)
+    # Find close→open transitions
     in_close = False
-    start = 0
+    close_start = 0
     for t in range(T):
         if gripper_cmds[t] > 0 and not in_close:
-            start = t
+            close_start = t
             in_close = True
         elif gripper_cmds[t] < 0 and in_close:
-            segments.append((start, t))
             in_close = False
-    if in_close:
-        segments.append((start, T))
+            seg_len = t - close_start
+            if seg_len >= 10:  # only meaningful close segments
+                for tt in range(max(0, t - window), min(T, t + window)):
+                    release_steps.add(tt)
 
-    result: list[bool | None] = [None] * T
-    for seg_start, seg_end in segments:
-        seg_len = seg_end - seg_start
-        success = seg_len >= min_hold_steps
-        for t in range(seg_start, seg_end):
-            result[t] = success
+    return release_steps
 
-    return result
+
+# ---------------------------------------------------------------------------
+# Robosuite / LIBERO sim-based detection
+# ---------------------------------------------------------------------------
+
+def check_grasp_robosuite(env, object_name: str) -> bool:
+    """Check if the gripper is grasping a specific object using robosuite's API.
+
+    Uses env._check_grasp() which checks that both left and right finger pads
+    are in contact with the object's collision geoms.
+
+    Args:
+        env:          The LIBERO OffScreenRenderEnv (or its inner env).
+        object_name:  Object key in env.objects_dict (e.g. "alphabet_soup_1").
+
+    Returns:
+        True if the gripper is grasping the object.
+    """
+    inner = env.env if hasattr(env, "env") else env
+    if not hasattr(inner, "_check_grasp") or not hasattr(inner, "objects_dict"):
+        return False
+    if object_name not in inner.objects_dict:
+        return False
+    robot = inner.robots[0]
+    return bool(inner._check_grasp(robot.gripper, inner.objects_dict[object_name]))
+
+
+def check_task_success(env) -> bool:
+    """Check if the full task goal is achieved using LIBERO's BDDL predicates.
+
+    Evaluates all goal predicates (e.g. "in(soup, basket)" AND "in(tomato, basket)").
+
+    Args:
+        env: The LIBERO OffScreenRenderEnv.
+
+    Returns:
+        True if all goal predicates are satisfied.
+    """
+    inner = env.env if hasattr(env, "env") else env
+    if not hasattr(inner, "_check_success"):
+        return False
+    try:
+        return bool(inner._check_success())
+    except Exception:
+        return False
+
+
+def check_goal_predicates(env) -> list[dict]:
+    """Evaluate each goal predicate individually and return detailed results.
+
+    Parses the BDDL goal_state and evaluates each predicate against the
+    current sim state using LIBERO's object_states_dict and eval_predicate_fn.
+
+    Returns a list of dicts, one per goal predicate:
+      {"predicate": "in", "args": ["alphabet_soup_1", "basket_1_contain_region"],
+       "satisfied": True}
+    """
+    inner = env.env if hasattr(env, "env") else env
+    results = []
+
+    if not hasattr(inner, "parsed_problem") or not hasattr(inner, "object_states_dict"):
+        return results
+
+    try:
+        from libero.libero.envs.predicates import eval_predicate_fn
+    except ImportError:
+        return results
+
+    goal_state = inner.parsed_problem.get("goal_state", [])
+    osd = inner.object_states_dict
+
+    for state in goal_state:
+        entry = {"predicate": state[0], "args": list(state[1:]), "satisfied": False}
+        try:
+            if len(state) == 3 and state[1] in osd and state[2] in osd:
+                entry["satisfied"] = bool(eval_predicate_fn(state[0], osd[state[1]], osd[state[2]]))
+            elif len(state) == 2 and state[1] in osd:
+                entry["satisfied"] = bool(eval_predicate_fn(state[0], osd[state[1]]))
+        except Exception:
+            pass
+        results.append(entry)
+
+    return results
+
+
+def check_object_placed(env, object_name: str) -> bool:
+    """Check if a specific object has been placed at its goal destination.
+
+    Looks through the goal predicates for ones involving this object
+    (e.g. "in(alphabet_soup_1, basket_1_contain_region)") and evaluates them.
+
+    Args:
+        env:          The LIBERO OffScreenRenderEnv.
+        object_name:  Object key (e.g. "alphabet_soup_1").
+
+    Returns:
+        True if the object satisfies its goal predicate.
+    """
+    predicates = check_goal_predicates(env)
+    for p in predicates:
+        if object_name in p["args"]:
+            return p["satisfied"]
+    return False
+
+
+def get_all_grasp_states(env, object_names: list[str]) -> dict[str, bool]:
+    """Check grasp state for multiple objects at once.
+
+    Args:
+        env:           The LIBERO OffScreenRenderEnv.
+        object_names:  List of object keys in env.objects_dict.
+
+    Returns:
+        Dict mapping object_name → is_grasped.
+    """
+    return {name: check_grasp_robosuite(env, name) for name in object_names}
+
+
+def get_articulation_states(env) -> dict[str, dict]:
+    """Get open/close/turn_on/turn_off states for all articulated objects.
+
+    Scans object_states_dict for objects that have joints (articulated),
+    and reads their current state.
+
+    Returns:
+        Dict mapping object_name → {"is_open": bool, "is_close": bool,
+                                     "turn_on": bool|None, "turn_off": bool|None}
+    """
+    inner = env.env if hasattr(env, "env") else env
+    if not hasattr(inner, "object_states_dict"):
+        return {}
+
+    osd = inner.object_states_dict
+    results = {}
+
+    for name, state in osd.items():
+        # Only check ObjectState (not SiteObjectState) with joints
+        if state.object_state_type != "object":
+            continue
+        if name not in inner.objects_dict:
+            continue
+        obj = inner.objects_dict[name]
+        if not hasattr(obj, "joints") or not obj.joints:
+            continue
+
+        entry: dict = {}
+        try:
+            entry["is_open"] = bool(state.is_open())
+        except Exception:
+            entry["is_open"] = None
+        try:
+            entry["is_close"] = bool(state.is_close())
+        except Exception:
+            entry["is_close"] = None
+        # turn_on / turn_off only for objects with that affordance
+        if hasattr(state, "has_turnon_affordance") and state.has_turnon_affordance:
+            try:
+                entry["turn_on"] = bool(state.turn_on())
+            except Exception:
+                entry["turn_on"] = None
+            try:
+                entry["turn_off"] = bool(state.turn_off())
+            except Exception:
+                entry["turn_off"] = None
+
+        if entry:
+            results[name] = entry
+
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -567,6 +704,7 @@ def find_all_target_objects(
 def find_active_target(
     eef_pos: np.ndarray,
     targets: list[tuple[str, np.ndarray]],
+    env=None,
     dest_pos: np.ndarray | None = None,
     placed_threshold: float = 0.08,
 ) -> tuple[str, np.ndarray]:
@@ -575,16 +713,16 @@ def find_active_target(
     For multi-target tasks (e.g. "put both X and Y in the basket"),
     the demo always operates on targets in the order they appear in
     the language instruction.  A target is considered "placed" (done)
-    when it is close to the destination (< placed_threshold meters).
-    We then advance to the next target in sequence.
+    when it satisfies its goal predicate (checked via LIBERO's BDDL
+    predicates).  Falls back to distance-based check if env is unavailable.
 
     Args:
         eef_pos:           Current gripper position (robot-base frame).
         targets:           Ordered list of (name, pos) from find_all_target_objects
                            (already in language-instruction order).
-        dest_pos:          Destination position (e.g. basket center). If None,
-                           falls back to the first (language-order) target.
-        placed_threshold:  Max distance from destination to count as "placed".
+        env:               Optional LIBERO env for predicate-based checks.
+        dest_pos:          Fallback destination position for distance check.
+        placed_threshold:  Fallback max distance to count as "placed".
 
     Returns:
         (active_target_name, active_target_pos)
@@ -592,18 +730,21 @@ def find_active_target(
     if len(targets) == 1:
         return targets[0]
 
+    # Preferred: use LIBERO predicates to check if target is placed
+    if env is not None:
+        for name, pos in targets:
+            if not check_object_placed(env, name):
+                return name, pos
+        return targets[-1]
+
+    # Fallback: distance-based check
     if dest_pos is not None:
-        # Walk through targets in order; skip any already placed at destination
         for name, pos in targets:
             dist_to_dest = float(np.linalg.norm(pos - dest_pos))
             if dist_to_dest > placed_threshold:
-                # This target hasn't been placed yet → it's the active one
                 return name, pos
-
-        # All targets placed → return the last one
         return targets[-1]
 
-    # No destination info → default to first target in language order
     return targets[0]
 
 
@@ -697,6 +838,29 @@ def compute_spatial_relation(
     return {"x": x_rel, "y": y_rel, "z": z_rel}
 
 
+def extract_eef_pose_7d(raw_obs: dict, sim, base_pos: np.ndarray) -> dict:
+    """Extract 7D end-effector pose: [x, y, z, roll, pitch, yaw, gripper_openness].
+
+    All values in robot-base frame.
+
+    Returns:
+        Dict with keys: x, y, z, roll, pitch, yaw, gripper_openness
+    """
+    eef_pos = np.array(raw_obs["robot0_eef_pos"]) - base_pos
+    eef_quat_wxyz = quat_wxyz_from_xyzw(np.array(raw_obs["robot0_eef_quat"]))
+    euler = quat_to_euler_deg(eef_quat_wxyz)
+    openness = _compute_gripper_openness_from_sim(sim, raw_obs)
+    return {
+        "x": float(eef_pos[0]),
+        "y": float(eef_pos[1]),
+        "z": float(eef_pos[2]),
+        "roll": float(euler[0]),
+        "pitch": float(euler[1]),
+        "yaw": float(euler[2]),
+        "gripper_openness": openness,
+    }
+
+
 def _compute_gripper_openness_from_sim(sim, raw_obs: dict) -> float:
     """Read gripper openness directly from MuJoCo sim state.
 
@@ -736,6 +900,7 @@ def extract_gt_from_obs(
     raw_obs: dict,
     sim,
     task_description: str,
+    env=None,
 ) -> dict:
     """Extract all ground truth fields from a raw LIBERO observation + sim state.
 
@@ -744,29 +909,12 @@ def extract_gt_from_obs(
         sim:     The MuJoCo ``sim`` object (e.g. ``env.sim``).
         task_description: Natural-language task string used to identify
                           the target object.
+        env:     Optional LIBERO OffScreenRenderEnv — when provided, enables
+                 sim-based detection: task_success, goal_predicates,
+                 active_target via predicates, grasp states, articulation states.
 
     Returns:
-        Dict with keys (Q1-Q6 legacy + Q7-Q11 new + multi-target):
-          eef_pos                      – [x, y, z] in robot-base frame (m)
-          base_pos_world               – [x, y, z] of robot base in world frame (m)
-          target_object_name           – str, *active* target (closest to gripper)
-          target_pos                   – [x, y, z] of active target in robot-base frame (m)
-          all_objects                  – {name: [x, y, z]} for all scene objects
-          can_close                    – bool (against active target)
-          next_direction               – [dx, dy, dz] unit vector toward active target
-          distance_to_target           – float (m) to active target
-          gripper_to_target_delta      – [Δx, Δy, Δz] in meters
-          gripper_to_target_relation   – {"x": str, "y": str, "z": str}
-          eef_orientation_quat         – [w, x, y, z]
-          eef_orientation_euler_deg    – [roll, pitch, yaw] in degrees
-          target_orientation_quat      – [w, x, y, z]
-          target_orientation_euler_deg – [roll, pitch, yaw] in degrees
-          relative_rotation_quat       – [w, x, y, z]
-          relative_rotation_euler_deg  – [roll, pitch, yaw] in degrees
-          pairwise_distance            – dict or None
-          gripper_openness             – float [0, 1]
-          targets_info                 – list of dicts, one per target object with
-                                         {name, pos, distance, is_active, can_close}
+        Dict with spatial GT fields + sim-based detection fields.
     """
     base_pos = get_robot_base_pos(sim)
     eef_pos = np.array(raw_obs["robot0_eef_pos"]) - base_pos
@@ -777,15 +925,13 @@ def extract_gt_from_obs(
     all_targets = find_all_target_objects(all_objects, task_description)
 
     # Find destination first so we can determine which target has been placed
-    # Use the first target's name for destination lookup (dest is shared in
-    # "put both X and Y in the basket" style tasks)
     first_target_name = all_targets[0][0] if all_targets else "unknown"
     dest_name, dest_pos = find_destination_object(
         all_objects, task_description, first_target_name,
     )
 
     target_name, target_pos = find_active_target(
-        eef_pos, all_targets, dest_pos=dest_pos,
+        eef_pos, all_targets, env=env, dest_pos=dest_pos,
     )
     targets_info = compute_targets_info(eef_pos, all_targets, target_name)
 
@@ -794,7 +940,6 @@ def extract_gt_from_obs(
     eef_orn = compute_orientation(eef_quat_wxyz)
 
     # --- Q8: Target object orientation ---
-    # MuJoCo get_body_xquat returns [w, x, y, z] natively
     target_quat_wxyz = sim.data.get_body_xquat(target_name).copy()
     target_orn = compute_orientation(target_quat_wxyz)
 
@@ -806,12 +951,22 @@ def extract_gt_from_obs(
     pairwise = compute_pairwise_distance(all_objects, *pair) if pair else None
 
     # --- Q11: Gripper openness ---
-    # Panda gripper has 2 finger joints ("finger_joint1", "finger_joint2"),
-    # each ranges from ~0.0 (closed) to ~0.04 (open).
-    # We read directly from sim.data.qpos for reliability — the robosuite
-    # observable robot0_gripper_qpos may not update correctly after
-    # set_state_from_flattened() in demo replay mode.
     openness = _compute_gripper_openness_from_sim(sim, raw_obs)
+
+    # --- Sim-based detection (when env is available) ---
+    task_success = check_task_success(env) if env else None
+    goal_predicates = check_goal_predicates(env) if env else []
+    articulation_states = get_articulation_states(env) if env else {}
+
+    # Grasp states for all target objects
+    target_names = [name for name, _ in all_targets]
+    grasp_states = get_all_grasp_states(env, target_names) if env else {}
+
+    # Enrich targets_info with placement and grasp from sim
+    for info in targets_info:
+        name = info["name"]
+        info["placed"] = check_object_placed(env, name) if env else None
+        info["grasped"] = grasp_states.get(name, None)
 
     return {
         "task_type": task_type,
@@ -840,8 +995,12 @@ def extract_gt_from_obs(
         "pairwise_distance": pairwise,
         # Q11
         "gripper_openness": openness,
-        # Multi-target info
+        # Multi-target info (now includes placed/grasped from sim)
         "targets_info": targets_info,
+        # Sim-based detection
+        "task_success": task_success,
+        "goal_predicates": goal_predicates,
+        "articulation_states": articulation_states if articulation_states else None,
     }
 
 

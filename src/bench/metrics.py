@@ -295,10 +295,9 @@ def format_results_table(results: dict[str, dict]) -> str:
     lines.append(
         f"{'Model':<30}  {'Parse%':>7}  "
         f"{'Q1 MAE(m)':>10}  {'Q2 MAE(m)':>10}  "
-        f"{'Q3 Acc':>8}  {'Q3 F1':>8}  "
-        f"{'Q4 CosSim':>10}  {'Q5 MAE(m)':>10}  {'Q6 AccAll':>10}  "
-        f"{'Q7 MAE(°)':>10}  {'Q8 MAE(°)':>10}  {'Q9 MAE(°)':>10}  "
-        f"{'Q10 MAE(m)':>11}  {'Q11 MAE':>8}"
+        f"{'Q3 MAE(m)':>10}  {'Q4 AccAll':>10}  "
+        f"{'Q5 MAE(m)':>10}  {'Q6 MAE(°)':>10}  "
+        f"{'Q7 MAE':>8}  {'Q8 TrMAE':>8}"
     )
     lines.append(sep)
 
@@ -308,25 +307,20 @@ def format_results_table(results: dict[str, dict]) -> str:
 
         q1_mae  = m.get("q1", {}).get("mae_overall")
         q2_mae  = m.get("q2", {}).get("mae_overall")
-        q3_acc  = m.get("q3", {}).get("accuracy")
-        q3_f1   = m.get("q3", {}).get("f1")
-        q4_cos  = m.get("q4", {}).get("mean_cosine_sim")
-        q5_mae  = m.get("q5", {}).get("mae_overall")
-        q6_acc  = m.get("q6", {}).get("acc_all")
-        q7_mae  = m.get("q7", {}).get("mae_overall_deg")
-        q8_mae  = m.get("q8", {}).get("mae_overall_deg")
-        q9_mae  = m.get("q9", {}).get("mae_overall_deg")
-        q10_mae = m.get("q10", {}).get("mae")
-        q11_mae = m.get("q11", {}).get("mae")
+        q3_mae  = m.get("q3", {}).get("mae_overall")
+        q4_acc  = m.get("q4", {}).get("acc_all")
+        q5_mae  = m.get("q5", {}).get("mae")
+        q6_mae  = m.get("q6", {}).get("mae_overall_deg")
+        q7_mae  = m.get("q7", {}).get("mae")
+        q8_mae  = m.get("q8", {}).get("mae_translation")
         parse   = m.get("parse_rate")
 
         lines.append(
             f"{model:<30}  {_f(parse, '.1%'):>7}  "
             f"{_f(q1_mae):>10}  {_f(q2_mae):>10}  "
-            f"{_f(q3_acc):>8}  {_f(q3_f1):>8}  "
-            f"{_f(q4_cos):>10}  {_f(q5_mae):>10}  {_f(q6_acc):>10}  "
-            f"{_f(q7_mae, '.1f'):>10}  {_f(q8_mae, '.1f'):>10}  {_f(q9_mae, '.1f'):>10}  "
-            f"{_f(q10_mae):>11}  {_f(q11_mae):>8}"
+            f"{_f(q3_mae):>10}  {_f(q4_acc):>10}  "
+            f"{_f(q5_mae):>10}  {_f(q6_mae, '.1f'):>10}  "
+            f"{_f(q7_mae):>8}  {_f(q8_mae):>8}"
         )
 
     lines.append(sep)

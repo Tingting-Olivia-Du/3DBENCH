@@ -28,24 +28,24 @@ Usage
   python scripts/02_run_vlm_eval.py --models qwen2.5-vl-7b
 
   # Override paths
+
 python scripts/02_run_vlm_eval.py \
-    --manifest data/gt-q11-libero-test/manifest.json \
-    --models qwen2.5-vl-3b \
-    --out_dir  rollout/libero-test-qwen-0512 \
+    --manifest data/gt-demo-libero-all-suite-train-0515/manifest.json \
+    --out_dir  rollout/debug/libero-train-qwen-0515-baseline-all-models-all-suite-selected-task \
+    --task_ids 0 1 \
     --prompt_yaml prompts/spatial_qa.yaml \
     --device   cuda:3
 
 
-# 只跑 libero_spatial 的 task 0-2, init_state 0 和 5
-
+# 只跑 libero_spatial 的 task 0-2, demo 0 和 1
 
 python scripts/02_run_vlm_eval.py \
-    --manifest data/gt-q11-libero-test/manifest.json \
+    --manifest data/gt-demo-libero-all-suite-test-0515/manifest.json \
     --out_dir rollout/libero-test-qwen-0512 \
     --prompt_yaml prompts/spatial_qa.yaml \
     --device cuda:3 \
     --task_ids 0 1 2 \
-    --state_indices 1 6
+    --demo_indices 0 1
 
 # 只跑 libero_spatial 和 libero_object, 最多100个样本
 python scripts/02_run_vlm_eval.py \
@@ -110,7 +110,8 @@ def parse_args() -> argparse.Namespace:
                    help="Path to a LoRA adapter directory (e.g. models/qwen2.5-vl-3b-mv-lora/q3/final). "
                         "When set, the model slug 'qwen2.5-vl-3b-mv-lora' loads it.")
     p.add_argument("--lora_dim", default=None,
-                   choices=[None, "q1", "q2", "q3", "q4", "q5", "q6"],
+                   choices=[None, "q1", "q2", "q3", "q4", "q5", "q6",
+                            "q7", "q8", "q9", "q10", "q11"],
                    help="Which dimension this LoRA targets. If omitted, read from "
                         "<lora_dir>/adapter_meta.json or <lora_dir>/../adapter_meta.json.")
     p.add_argument("--prompt_yaml", default=None,
@@ -121,10 +122,10 @@ def parse_args() -> argparse.Namespace:
                    help="Only run these suites, or 'all' for no filtering (default: all)")
     p.add_argument("--task_ids", nargs="+", type=int, default=None,
                    help="Only run these task IDs (e.g. --task_ids 0 1 2)")
-    p.add_argument("--state_indices", nargs="+", type=int, default=None,
-                   help="Only run these init_state_idx values (e.g. --state_indices 0 5 10)")
+    p.add_argument("--demo_indices", nargs="+", type=int, default=None,
+                   help="Only run these demo indices (e.g. --demo_indices 0 1 2)")
     p.add_argument("--frame_types", nargs="+", default=None,
-                   help="Only run these frame types (e.g. --frame_types init traj)")
+                   help="Only run these frame types (e.g. --frame_types traj)")
     p.add_argument("--max_samples", type=int, default=None,
                    help="Cap the total number of samples to run")
     return p.parse_args()
@@ -970,8 +971,8 @@ def main() -> None:
         manifest = [r for r in manifest if r.get("suite") in args.suites]
     if args.task_ids is not None:
         manifest = [r for r in manifest if r.get("task_id") in args.task_ids]
-    if args.state_indices is not None:
-        manifest = [r for r in manifest if r.get("init_state_idx") in args.state_indices]
+    if args.demo_indices is not None:
+        manifest = [r for r in manifest if r.get("demo_idx") in args.demo_indices]
     if args.frame_types:
         manifest = [r for r in manifest if r.get("frame_type") in args.frame_types]
     if args.max_samples is not None:

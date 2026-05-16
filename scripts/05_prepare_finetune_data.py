@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Convert one or more LIBERO QA manifests into per-dimension SFT JSONL files.
 
-For every manifest sample, produces 6 training examples — one per QA dimension.
+For every manifest sample, produces 8 training examples — one per QA dimension.
 Q1_dest is folded into Q1: the Q1 example asks for both `q1` and `q1_dest`
 (the latter is null for articulation samples).
 
@@ -15,7 +15,7 @@ Output layout:
       q1/{train,val,test}.jsonl
       q2/{train,val,test}.jsonl
       ...
-      q6/{train,val,test}.jsonl
+      q8/{train,val,test}.jsonl
       split_info.json   <-- records which task_ids per suite landed in each fold
 
 Each line in a *.jsonl file:
@@ -35,10 +35,23 @@ the training script is responsible for joining them with `--data_root`.
 
 Usage
 -----
+
+cd /workspace/tingting/3DBENCH
+
+python scripts/05_prepare_finetune_data.py \
+    --manifest_glob 'data/gt-demo-libero-all-suite-train-fix/*/manifest.json' \
+    --out_dir data/finetune-0515-fix \
+    --val_task 8 --test_task 9
+
+
+
   # 1928-sample, 4-suite production
   python scripts/05_prepare_finetune_data.py \
       --manifest_glob 'data/gt-q6-mv/*/manifest.json' \
       --out_dir data/finetune-mv
+      --val_task 8 --test_task 9
+
+
 
   # 40-sample mini smoke
   python scripts/05_prepare_finetune_data.py \
@@ -62,6 +75,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.per_dim_prompt_builder import PerDimPromptBuilder, VALID_DIMS
+from bench.prompt_builder import PromptBuilder
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +88,7 @@ def parse_args() -> argparse.Namespace:
                    help="Glob matching one or more manifest.json files "
                         "(e.g. 'data/gt-q6-mv/*/manifest.json').")
     p.add_argument("--out_dir", required=True,
-                   help="Output directory for {q1..q6}/{train,val,test}.jsonl.")
+                   help="Output directory for {q1..q8}/{train,val,test}.jsonl.")
     p.add_argument("--val_task", type=int, default=8,
                    help="Per-suite task_id to hold out for validation (default 8).")
     p.add_argument("--test_task", type=int, default=9,
@@ -111,7 +125,19 @@ def _dxdydz(v, decimals: int):
 
 
 def build_assistant_payload(dim: str, gt: dict, dec_m: int, dec_unit: int) -> dict:
-    """Return the dict the assistant should emit for `dim` given the sample's GT."""
+    """Return the dict the assistant should emit for `dim` given the sample's GT.
+
+    New question numbering (May 2026):
+        Q1  – source object position       (GT: target_pos)
+        Q1_dest – dest position             (GT: dest_pos)
+        Q2  – gripper position              (GT: eef_pos)
+        Q3  – gripper-to-target offset      (GT: gripper_to_target_delta)
+        Q4  – spatial relation              (GT: gripper_to_target_relation)
+        Q5  – pairwise distance             (GT: pairwise_distance)
+        Q6  – EE orientation                (GT: eef_orientation_euler_deg)
+        Q7  – gripper openness              (GT: gripper_openness)
+        Q8  – 7-D action                    (GT: demo_action)
+    """
     if dim == "q1":
         return {
             "task_type": gt["task_type"],
@@ -121,40 +147,42 @@ def build_assistant_payload(dim: str, gt: dict, dec_m: int, dec_unit: int) -> di
     if dim == "q2":
         return {"q2": _xyz(gt["eef_pos"], dec_m)}
     if dim == "q3":
-        return {"q3": {"can_close": "yes" if gt["can_close"] else "no"}}
+        return {"q3": _dxdydz(gt["gripper_to_target_delta"], dec_m)}
     if dim == "q4":
-        return {"q4": _dxdydz(gt["next_direction"], dec_unit)}
+        return {"q4": gt["gripper_to_target_relation"]}
     if dim == "q5":
-        return {"q5": _dxdydz(gt["gripper_to_target_delta"], dec_m)}
-    if dim == "q6":
-        return {"q6": gt["gripper_to_target_relation"]}
-    if dim == "q7":
-        e = gt.get("eef_orientation_euler_deg")
-        if e is None:
-            return {"q7": None}
-        return {"q7": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
-    if dim == "q8":
-        e = gt.get("target_orientation_euler_deg")
-        if e is None:
-            return {"q8": None}
-        return {"q8": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
-    if dim == "q9":
-        e = gt.get("relative_rotation_euler_deg")
-        if e is None:
-            return {"q9": None}
-        return {"q9": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
-    if dim == "q10":
         pd = gt.get("pairwise_distance")
         if pd is None:
-            return {"q10": None}
-        return {"q10": {"object_a": pd["object_a"], "object_b": pd["object_b"],
+            return {"q5": None}
+        return {"q5": {"object_a": pd["object_a"], "object_b": pd["object_b"],
                         "distance_m": _r_m(pd["distance_m"], dec_m)}}
-    if dim == "q11":
+    if dim == "q6":
+        e = gt.get("eef_orientation_euler_deg")
+        if e is None:
+            return {"q6": None}
+        return {"q6": {"roll": _r_m(e[0], dec_unit), "pitch": _r_m(e[1], dec_unit), "yaw": _r_m(e[2], dec_unit)}}
+    if dim == "q7":
         openness = gt.get("gripper_openness")
         if openness is None:
-            return {"q11": None}
-        return {"q11": {"openness": _r_m(openness, 2)}}
+            return {"q7": None}
+        return {"q7": {"openness": _r_m(openness, 2)}}
+    if dim == "q8":
+        action = gt.get("demo_action")
+        if action is None:
+            return {"q8": None}
+        a = _r_m(action, dec_m)
+        return {"q8": {"dx": a[0], "dy": a[1], "dz": a[2],
+                        "droll": a[3], "dpitch": a[4], "dyaw": a[5],
+                        "gripper": a[6]}}
     raise ValueError(f"unknown dim {dim!r}")
+
+
+def build_all_dim_payload(gt: dict, dec_m: int, dec_unit: int) -> dict:
+    """Build a single assistant JSON containing ALL dimensions (for all-in-one SFT)."""
+    payload = {}
+    for dim in VALID_DIMS:
+        payload.update(build_assistant_payload(dim, gt, dec_m, dec_unit))
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +213,7 @@ def main() -> None:
 
     print(f"Total source samples: {len(all_records)}")
 
-    # Pre-build the 6 prompt builders.
+    # Pre-build the 8 prompt builders.
     builders = {d: PerDimPromptBuilder(d) for d in VALID_DIMS}
 
     # Bucket records by fold.
@@ -236,6 +264,34 @@ def main() -> None:
                     f.write(json.dumps(line, ensure_ascii=False) + "\n")
                     written_counts[dim][fold_name] += 1
 
+    # ── All-in-one: single prompt asking all Q1–Q8 (uses spatial_qa.yaml) ──
+    all_dir = out_root / "all"
+    all_dir.mkdir(parents=True, exist_ok=True)
+    all_builder = PromptBuilder()  # loads spatial_qa.yaml
+    all_sys_prompt = all_builder.system_prompt
+    written_counts["all"] = {"train": 0, "val": 0, "test": 0}
+    for fold_name, recs in folds.items():
+        jsonl_path = all_dir / f"{fold_name}.jsonl"
+        with jsonl_path.open("w") as f:
+            for rec in recs:
+                user_prompt = all_builder.build_user_prompt(rec["task_description"])
+                payload = build_all_dim_payload(
+                    rec["gt"], args.float_decimals_m, args.float_decimals_unit
+                )
+                img_paths = rec.get("image_paths") or {"agent": rec["image_path"]}
+                line = {
+                    "sample_id": rec["sample_id"],
+                    "suite": rec["suite"],
+                    "task_id": int(rec["task_id"]),
+                    "frame_type": rec.get("frame_type"),
+                    "image_paths": img_paths,
+                    "system": all_sys_prompt,
+                    "user": user_prompt,
+                    "assistant": json.dumps(payload, ensure_ascii=False),
+                }
+                f.write(json.dumps(line, ensure_ascii=False) + "\n")
+                written_counts["all"][fold_name] += 1
+
     # Split info for reproducibility / audit.
     split_info = {
         "manifest_glob": args.manifest_glob,
@@ -249,7 +305,7 @@ def main() -> None:
     (out_root / "split_info.json").write_text(json.dumps(split_info, indent=2))
 
     print("\n=== Per-dim JSONL counts ===")
-    for dim in VALID_DIMS:
+    for dim in list(VALID_DIMS) + ["all"]:
         c = written_counts[dim]
         print(f"  {dim}: train={c['train']}  val={c['val']}  test={c['test']}")
 
