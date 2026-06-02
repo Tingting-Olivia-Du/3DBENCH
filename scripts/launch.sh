@@ -15,6 +15,8 @@
 #
 # Logs:  .tmp/vla_runs/<exp>_gpu<gpu>.log   (tail -f to watch)
 # Stop:  pkill -f "master_port <port>"
+# wandb: uploads live to the wandb 'vlm4vla' project by default (online).
+#        Set WANDB_MODE=offline to keep metrics local (sync later with wandb sync).
 # ──────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -57,7 +59,8 @@ echo "================================================================"
 cd "$VLM4VLA_ROOT"
 CUDA_VISIBLE_DEVICES="$GPU" \
 PATH="$VENV_BIN:$PATH" \
-WANDB_MODE="${WANDB_MODE:-offline}" \
+WANDB_MODE="${WANDB_MODE:-online}" \
+WANDB_ENTITY="${WANDB_ENTITY:-tingtingdu06-uw-madison}" \
 PYTHONUNBUFFERED=1 \
 nohup torchrun \
     --nnodes 1 --node_rank 0 --nproc_per_node 1 \
