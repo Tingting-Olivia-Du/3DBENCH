@@ -28,12 +28,13 @@ Usage:
 
   python scripts/07_compare_base_vs_lora.py \
       --benchmark libero \
-      --base_root  data/base-libero-test-0508 \
-      --lora_root  data/lora-libero-test-0508 \
-      --manifest   data/gt-q6-mv-test/manifest.json \
-      --out_json   data/results-base-vs-lora-libero-0509.json \
-      --out_md     data/results-base-vs-lora-libero-0509.md
+      --base_root  rollout/baseline/libero-test-9-qwen-0515-baseline-all-models-all-suite \
+      --lora_root  rollout/lora-perdim-ckpt4000 \
+      --manifest   data/gt-demo-libero-all-suite-train-fix/manifest.json \
+      --out_md     results/0516/results-base-vs-lora-libero-detailed-0516.md
 
+/workspace/tingting/3DBENCH/
+      
   python scripts/07_compare_base_vs_lora.py \
       --benchmark calvin \
       --base_root  data/runs-mv-base-calvin-0509-fixed \
@@ -67,6 +68,7 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.output_parser import ResponseParser
 from bench.metrics import (
+    _circular_distance_deg,
     angular_metrics,
     position_metrics,
     scalar_metrics,
@@ -128,6 +130,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out_md",   default=None,
                    help="Output markdown path. Same defaulting rule as --out_json.")
     p.add_argument("--dims", nargs="+", default=["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"])
+    p.add_argument("--out_csv", default=None,
+                   help="Write per-sample detail CSV (base vs LoRA side-by-side). "
+                        "If not set, no CSV is written.")
     args = p.parse_args()
 
     preset = BENCHMARK_PRESETS[args.benchmark]
@@ -416,10 +421,293 @@ def _score_q8(parser, samples, gt_by_id) -> dict:
         m[f"mae_{name}"] = float(np.mean(ae[:, i]))
     m["mae_translation"] = float(np.mean(ae[:, :3]))
     m["mae_rotation"] = float(np.mean(ae[:, 3:6]))
+    # Cosine similarity for translation (dx, dy, dz)
+    gt_trans = gt_arr[:, :3]
+    pr_trans = pr_arr[:, :3]
+    dot = np.sum(gt_trans * pr_trans, axis=1)
+    norm_gt = np.linalg.norm(gt_trans, axis=1)
+    norm_pr = np.linalg.norm(pr_trans, axis=1)
+    denom = norm_gt * norm_pr
+    # Avoid division by zero when either vector is zero
+    valid = denom > 1e-12
+    if valid.any():
+        cos_sim = dot[valid] / denom[valid]
+        cos_sim = np.clip(cos_sim, -1.0, 1.0)
+        m["cos_sim_translation_mean"] = float(np.mean(cos_sim))
+        m["cos_sim_translation_median"] = float(np.median(cos_sim))
+        m["cos_sim_translation_n_valid"] = int(valid.sum())
+    else:
+        m["cos_sim_translation_mean"] = None
+        m["cos_sim_translation_median"] = None
+        m["cos_sim_translation_n_valid"] = 0
     gt_sign = gt_arr[:, 6] > 0
     pr_sign = pr_arr[:, 6] > 0
     m["gripper_accuracy"] = float(np.mean(gt_sign == pr_sign))
     return m
+
+
+# ---------------------------------------------------------------------------
+# Per-sample detail collection
+# ---------------------------------------------------------------------------
+
+def _cosine_similarity(a, b) -> float:
+    """Cosine similarity between two vectors. Returns 0 if either is zero."""
+    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    if na < 1e-12 or nb < 1e-12:
+        return 0.0
+    return float(np.dot(a, b) / (na * nb))
+
+
+def _safe_list(val):
+    if isinstance(val, (list, tuple)) and len(val) == 3:
+        return [float(v) for v in val]
+    return None
+
+
+def _round_list(v):
+    return [round(x, 4) for x in v] if v else None
+
+
+def collect_per_sample_details(
+    parser: ResponseParser,
+    gt_by_id: dict[str, dict],
+    base_samples: dict[str, dict],
+    lora_samples_by_dim: dict[str, dict[str, dict]],
+) -> list[dict]:
+    """Walk through every GT sample and collect per-sample gt / base / lora predictions and errors.
+
+    ``lora_samples_by_dim`` maps dim name (e.g. "q1", "q8") to the LoRA
+    response dict keyed by image_path.  q1_dest reuses the q1 LoRA responses.
+    """
+
+    records: list[dict] = []
+
+    for sid, gt_rec in gt_by_id.items():
+        gt = gt_rec["gt"]
+        base_rec = base_samples.get(sid)
+        base_parsed = parser.parse(base_rec["raw_response"]) if base_rec else {}
+
+        rec: dict = {
+            "image_path": sid,
+            "sample_id": gt_rec.get("sample_id"),
+            "task_id": gt_rec.get("task_id"),
+            "task_description": gt_rec.get("task_description", ""),
+            "suite": gt_rec.get("suite"),
+            "target_object": gt.get("target_object_name"),
+            "dest_object": gt.get("dest_object_name"),
+        }
+
+        # --- helper closures ---
+        def _xyz_err(pred, gt_val):
+            if pred and gt_val:
+                return [round(abs(p - g), 4) for p, g in zip(pred, gt_val)]
+            return None
+
+        # --- Q1 source ---
+        gt_q1 = _safe_list(gt.get("target_pos"))
+        base_q1 = _safe_list(base_parsed.get("q1_object_pos"))
+        lora_q1_parsed = None
+        lora_q1_samples = lora_samples_by_dim.get("q1", {})
+        if sid in lora_q1_samples:
+            lora_q1_parsed = parser.parse(lora_q1_samples[sid]["raw_response"])
+        lora_q1 = _safe_list(lora_q1_parsed.get("q1_object_pos")) if lora_q1_parsed else None
+        rec["q1"] = {
+            "gt": _round_list(gt_q1),
+            "base_pred": _round_list(base_q1),
+            "lora_pred": _round_list(lora_q1),
+            "base_err": _xyz_err(base_q1, gt_q1),
+            "lora_err": _xyz_err(lora_q1, gt_q1),
+        }
+
+        # --- Q1 dest ---
+        gt_q1d = _safe_list(gt.get("dest_pos"))
+        base_q1d = _safe_list(base_parsed.get("q1_dest_pos"))
+        # q1_dest reuses q1 LoRA
+        lora_q1d = _safe_list(lora_q1_parsed.get("q1_dest_pos")) if lora_q1_parsed else None
+        rec["q1_dest"] = {
+            "gt": _round_list(gt_q1d),
+            "base_pred": _round_list(base_q1d),
+            "lora_pred": _round_list(lora_q1d),
+            "base_err": _xyz_err(base_q1d, gt_q1d),
+            "lora_err": _xyz_err(lora_q1d, gt_q1d),
+        }
+
+        # --- Q2 gripper pos ---
+        gt_q2 = _safe_list(gt.get("eef_pos"))
+        base_q2 = _safe_list(base_parsed.get("q2_gripper_pos"))
+        lora_q2_parsed = None
+        lora_q2_samples = lora_samples_by_dim.get("q2", {})
+        if sid in lora_q2_samples:
+            lora_q2_parsed = parser.parse(lora_q2_samples[sid]["raw_response"])
+        lora_q2 = _safe_list(lora_q2_parsed.get("q2_gripper_pos")) if lora_q2_parsed else None
+        rec["q2"] = {
+            "gt": _round_list(gt_q2),
+            "base_pred": _round_list(base_q2),
+            "lora_pred": _round_list(lora_q2),
+            "base_err": _xyz_err(base_q2, gt_q2),
+            "lora_err": _xyz_err(lora_q2, gt_q2),
+        }
+
+        # --- Q3 gripper-to-target offset ---
+        gt_q3 = _safe_list(gt.get("gripper_to_target_delta"))
+        base_q3 = _safe_list(base_parsed.get("q3_gripper_to_target"))
+        lora_q3_parsed = None
+        lora_q3_samples = lora_samples_by_dim.get("q3", {})
+        if sid in lora_q3_samples:
+            lora_q3_parsed = parser.parse(lora_q3_samples[sid]["raw_response"])
+        lora_q3 = _safe_list(lora_q3_parsed.get("q3_gripper_to_target")) if lora_q3_parsed else None
+        rec["q3"] = {
+            "gt": _round_list(gt_q3),
+            "base_pred": _round_list(base_q3),
+            "lora_pred": _round_list(lora_q3),
+            "base_err": _xyz_err(base_q3, gt_q3),
+            "lora_err": _xyz_err(lora_q3, gt_q3),
+        }
+
+        # --- Q4 spatial relation ---
+        gt_q4 = gt.get("gripper_to_target_relation")
+        base_q4 = base_parsed.get("q4_spatial_relation")
+        lora_q4_parsed = None
+        lora_q4_samples = lora_samples_by_dim.get("q4", {})
+        if sid in lora_q4_samples:
+            lora_q4_parsed = parser.parse(lora_q4_samples[sid]["raw_response"])
+        lora_q4 = lora_q4_parsed.get("q4_spatial_relation") if lora_q4_parsed else None
+
+        def _q4_correct(pred, gt_val):
+            if isinstance(pred, dict) and isinstance(gt_val, dict):
+                return {ax: (pred.get(ax) == gt_val.get(ax)) for ax in ("x", "y", "z")}
+            return None
+
+        def _q4_fmt(v):
+            if isinstance(v, dict):
+                return v
+            return None
+
+        rec["q4"] = {
+            "gt": _q4_fmt(gt_q4),
+            "base_pred": _q4_fmt(base_q4),
+            "lora_pred": _q4_fmt(lora_q4),
+            "base_correct": _q4_correct(base_q4, gt_q4),
+            "lora_correct": _q4_correct(lora_q4, gt_q4),
+        }
+
+        # --- Q5 pairwise distance ---
+        gt_q5_dict = gt.get("pairwise_distance")
+        base_q5_dict = base_parsed.get("q5_pairwise_distance")
+        lora_q5_parsed = None
+        lora_q5_samples = lora_samples_by_dim.get("q5", {})
+        if sid in lora_q5_samples:
+            lora_q5_parsed = parser.parse(lora_q5_samples[sid]["raw_response"])
+        lora_q5_dict = lora_q5_parsed.get("q5_pairwise_distance") if lora_q5_parsed else None
+
+        def _q5_val(d):
+            if isinstance(d, dict):
+                v = d.get("distance_m")
+                return round(float(v), 4) if v is not None else None
+            return None
+
+        gt_q5 = _q5_val(gt_q5_dict)
+        base_q5 = _q5_val(base_q5_dict)
+        lora_q5 = _q5_val(lora_q5_dict)
+        rec["q5"] = {
+            "gt": gt_q5,
+            "base_pred": base_q5,
+            "lora_pred": lora_q5,
+            "base_err": round(abs(base_q5 - gt_q5), 4) if base_q5 is not None and gt_q5 is not None else None,
+            "lora_err": round(abs(lora_q5 - gt_q5), 4) if lora_q5 is not None and gt_q5 is not None else None,
+        }
+
+        # --- Q6 EE orientation ---
+        gt_q6 = _safe_list(gt.get("eef_orientation_euler_deg"))
+        base_q6 = _safe_list(base_parsed.get("q6_eef_orientation_euler"))
+        lora_q6_parsed = None
+        lora_q6_samples = lora_samples_by_dim.get("q6", {})
+        if sid in lora_q6_samples:
+            lora_q6_parsed = parser.parse(lora_q6_samples[sid]["raw_response"])
+        lora_q6 = _safe_list(lora_q6_parsed.get("q6_eef_orientation_euler")) if lora_q6_parsed else None
+
+        def _euler_err(pred, gt_val):
+            if pred and gt_val:
+                return [round(_circular_distance_deg(p, g), 2) for p, g in zip(pred, gt_val)]
+            return None
+
+        rec["q6"] = {
+            "gt": _round_list(gt_q6),
+            "base_pred": _round_list(base_q6),
+            "lora_pred": _round_list(lora_q6),
+            "base_err_deg": _euler_err(base_q6, gt_q6),
+            "lora_err_deg": _euler_err(lora_q6, gt_q6),
+        }
+
+        # --- Q7 gripper openness ---
+        gt_q7 = gt.get("gripper_openness")
+        base_q7 = base_parsed.get("q7_gripper_openness")
+        lora_q7_parsed = None
+        lora_q7_samples = lora_samples_by_dim.get("q7", {})
+        if sid in lora_q7_samples:
+            lora_q7_parsed = parser.parse(lora_q7_samples[sid]["raw_response"])
+        lora_q7 = lora_q7_parsed.get("q7_gripper_openness") if lora_q7_parsed else None
+        rec["q7"] = {
+            "gt": round(float(gt_q7), 4) if gt_q7 is not None else None,
+            "base_pred": round(float(base_q7), 4) if base_q7 is not None else None,
+            "lora_pred": round(float(lora_q7), 4) if lora_q7 is not None else None,
+            "base_err": round(abs(float(base_q7) - float(gt_q7)), 4) if base_q7 is not None and gt_q7 is not None else None,
+            "lora_err": round(abs(float(lora_q7) - float(gt_q7)), 4) if lora_q7 is not None and gt_q7 is not None else None,
+        }
+
+        # --- Q8 7D next action ---
+        gt_q8_val = gt.get("demo_action")
+        base_q8_val = base_parsed.get("q8_next_action")
+        lora_q8_parsed = None
+        lora_q8_samples = lora_samples_by_dim.get("q8", {})
+        if sid in lora_q8_samples:
+            lora_q8_parsed = parser.parse(lora_q8_samples[sid]["raw_response"])
+        lora_q8_val = lora_q8_parsed.get("q8_next_action") if lora_q8_parsed else None
+
+        def _parse_q8_list(val):
+            if isinstance(val, dict):
+                tr = val.get("translation")
+                ro = val.get("rotation")
+                gr = val.get("gripper")
+                if (isinstance(tr, (list, tuple)) and len(tr) == 3
+                        and isinstance(ro, (list, tuple)) and len(ro) == 3
+                        and gr is not None):
+                    return [float(v) for v in tr] + [float(v) for v in ro] + [float(gr)]
+            return None
+
+        gt_q8 = [float(v) for v in gt_q8_val] if isinstance(gt_q8_val, (list, tuple)) and len(gt_q8_val) == 7 else None
+        base_q8 = _parse_q8_list(base_q8_val)
+        lora_q8 = _parse_q8_list(lora_q8_val)
+
+        def _q8_detail(pred, gt_val):
+            if pred is None or gt_val is None:
+                return None, None, None, None
+            trans_err = [round(abs(pred[i] - gt_val[i]), 4) for i in range(3)]
+            rot_err = [round(abs(pred[i] - gt_val[i]), 4) for i in range(3, 6)]
+            grip_err = round(abs(pred[6] - gt_val[6]), 4)
+            cos_sim = round(_cosine_similarity(gt_val[:3], pred[:3]), 4)
+            return trans_err, rot_err, grip_err, cos_sim
+
+        base_trans_err, base_rot_err, base_grip_err, base_cos = _q8_detail(base_q8, gt_q8)
+        lora_trans_err, lora_rot_err, lora_grip_err, lora_cos = _q8_detail(lora_q8, gt_q8)
+        rec["q8"] = {
+            "gt": _round_list(gt_q8),
+            "base_pred": _round_list(base_q8),
+            "lora_pred": _round_list(lora_q8),
+            "base_trans_err": base_trans_err,
+            "base_trans_cos_sim": base_cos,
+            "base_rot_err": base_rot_err,
+            "base_grip_err": base_grip_err,
+            "lora_trans_err": lora_trans_err,
+            "lora_trans_cos_sim": lora_cos,
+            "lora_rot_err": lora_rot_err,
+            "lora_grip_err": lora_grip_err,
+        }
+
+        records.append(rec)
+
+    return records
 
 
 # ---------------------------------------------------------------------------
@@ -449,6 +737,19 @@ SECONDARY = {
     "q6":      "geodesic_mean_deg",
     "q7":      "rmse",
     "q8":      "gripper_accuracy",
+}
+
+# Human-readable dimension names for table headers
+DIM_LABEL = {
+    "q1":      "Q1 Source Obj Pos",
+    "q1_dest": "Q1d Dest Pos",
+    "q2":      "Q2 Gripper Pos",
+    "q3":      "Q3 Grip→Target Offset",
+    "q4":      "Q4 Spatial Relation",
+    "q5":      "Q5 Pairwise Dist",
+    "q6":      "Q6 EE Orientation",
+    "q7":      "Q7 Gripper Openness",
+    "q8":      "Q8 7D Action",
 }
 
 
@@ -516,6 +817,7 @@ def main() -> None:
     # Score each LoRA on its target dim (and Q1 LoRA additionally on Q1_dest,
     # since Q1 is folded with Q1_dest in the per-dim prompt).
     lora_results: dict[str, dict] = {}
+    lora_samples_by_dim: dict[str, dict[str, dict]] = {}   # dim → {image_path: rec}
     for dim in args.dims:
         slug = args.lora_slug_template.format(dim=dim)
         lora_dir = lora_root / slug
@@ -530,6 +832,7 @@ def main() -> None:
         print(f"LoRA {dim} run: {run}")
         samples = load_responses_by_sample(run)
         print(f"  responses: {len(samples)}")
+        lora_samples_by_dim[dim] = samples
 
         # The per-dim LoRA only emits its own dim, so we score only that dim
         # (plus q1_dest for the q1 LoRA).
@@ -570,15 +873,16 @@ def main() -> None:
     md_lines.append("")
     md_lines.append("## Headline metrics (LoRA only answers its own dim; q1 LoRA also covers q1_dest)")
     md_lines.append("")
-    md_lines.append("| Dim | Metric | Base | LoRA | Δ (LoRA − Base) | Parse rate (base / LoRA) |")
-    md_lines.append("|-----|--------|------|------|------------------|---------------------------|")
+    md_lines.append("| Dimension | Metric | Base | LoRA | Δ (LoRA − Base) | Parse rate (base / LoRA) |")
+    md_lines.append("|-----------|--------|------|------|------------------|---------------------------|")
     for r in rows:
         delta = _delta_str(r["base_primary"], r["lora_primary"], r["lower_is_better"])
         improvement_dir = "↓" if r["lower_is_better"] else "↑"
         pr_b = _fmt_metric(r["base_parse_rate"])
         pr_l = _fmt_metric(r["lora_parse_rate"])
+        dim_label = DIM_LABEL.get(r["dim"], r["dim"].upper())
         md_lines.append(
-            f"| **{r['dim'].upper()}** "
+            f"| **{dim_label}** "
             f"| {r['primary_metric']} ({improvement_dir} better) "
             f"| {_fmt_metric(r['base_primary'])} "
             f"| {_fmt_metric(r['lora_primary'])} "
@@ -589,15 +893,26 @@ def main() -> None:
     md_lines.append("")
     md_lines.append("### Secondary metrics")
     md_lines.append("")
-    md_lines.append("| Dim | Metric | Base | LoRA |")
-    md_lines.append("|-----|--------|------|------|")
+    md_lines.append("| Dimension | Metric | Base | LoRA |")
+    md_lines.append("|-----------|--------|------|------|")
     for r in rows:
+        dim_label = DIM_LABEL.get(r["dim"], r["dim"].upper())
         md_lines.append(
-            f"| **{r['dim'].upper()}** "
+            f"| **{dim_label}** "
             f"| {r['secondary_metric']} "
             f"| {_fmt_metric(r['base_secondary'])} "
             f"| {_fmt_metric(r['lora_secondary'])} |"
         )
+        # Extra row for Q8: cosine similarity of translation
+        if r["dim"] == "q8":
+            b8 = base_results.get("q8", {})
+            l8 = lora_results.get("q8", {})
+            md_lines.append(
+                f"| **{dim_label}** "
+                f"| cos_sim_translation_mean "
+                f"| {_fmt_metric(b8.get('cos_sim_translation_mean'))} "
+                f"| {_fmt_metric(l8.get('cos_sim_translation_mean'))} |"
+            )
 
     md_lines.append("")
     md_lines.append("### Notes")
@@ -610,6 +925,14 @@ def main() -> None:
     md_lines.append("- Q7 is gripper openness [0,1]; MAE is lower-better.")
     md_lines.append("- Q8 is 7D next action; translation MAE is lower-better, gripper accuracy is higher-better.")
     md_lines.append("- Parse rate = fraction of samples where the model emitted a parseable value for the dim.")
+
+    # ---- Collect per-sample details ----------------------------------------
+    print("\nCollecting per-sample details ...")
+    sample_details = collect_per_sample_details(
+        parser, gt_by_id, base_samples, lora_samples_by_dim,
+    )
+    print(f"  {len(sample_details)} per-sample records collected.")
+
     md_lines.append("")
     md_lines.append("## Full per-dim results (incl. per-axis breakdown)")
     md_lines.append("")
@@ -619,6 +942,122 @@ def main() -> None:
         "lora":  lora_results,
     }, indent=2))
     md_lines.append("```")
+
+    # ---- Per-sample detail table -------------------------------------------
+    md_lines.append("")
+    md_lines.append(f"## Per-Sample Detail ({len(sample_details)} samples)")
+    md_lines.append("")
+
+    def _xyz_fmt(v):
+        if isinstance(v, list) and len(v) == 3:
+            return f"`[{v[0]:.4f}, {v[1]:.4f}, {v[2]:.4f}]`"
+        return "—"
+
+    def _mae_xyz_fmt(v):
+        if isinstance(v, list) and len(v) == 3:
+            overall = (sum(x**2 for x in v) / 3) ** 0.5
+            return f"`[{v[0]:.4f}, {v[1]:.4f}, {v[2]:.4f}]` → `{overall:.4f}`"
+        return "—"
+
+    def _scalar_fmt(v):
+        if v is None:
+            return "—"
+        return f"`{v:.4f}`"
+
+    def _rel_fmt(v):
+        if isinstance(v, dict):
+            return f"`{v.get('x','?')}/{v.get('y','?')}/{v.get('z','?')}`"
+        return "—"
+
+    def _q4_ok(v):
+        if isinstance(v, dict):
+            return "`{}/{}/{}`".format(
+                "✓" if v.get("x") else "✗",
+                "✓" if v.get("y") else "✗",
+                "✓" if v.get("z") else "✗",
+            )
+        return "—"
+
+    def _euler_fmt(v):
+        if isinstance(v, list) and len(v) == 3:
+            return f"`[{v[0]:.1f}, {v[1]:.1f}, {v[2]:.1f}]`"
+        return "—"
+
+    def _action7_fmt(v):
+        if isinstance(v, list) and len(v) == 7:
+            return f"`[{', '.join(f'{x:.4f}' for x in v)}]`"
+        return "—"
+
+    ps_hdrs = [
+        "ID", "Task", "Target",
+        "Q1 Source Obj gt", "Q1 Source Obj base", "Q1 Source Obj lora",
+        "Q1 Source Obj base err", "Q1 Source Obj lora err",
+        "Q2 Gripper Pos gt", "Q2 Gripper Pos base", "Q2 Gripper Pos lora",
+        "Q2 Gripper Pos base err", "Q2 Gripper Pos lora err",
+        "Q3 Grip→Target gt", "Q3 Grip→Target base", "Q3 Grip→Target lora",
+        "Q3 Grip→Target base err", "Q3 Grip→Target lora err",
+        "Q4 Spatial Rel gt", "Q4 Spatial Rel base", "Q4 Spatial Rel lora",
+        "Q4 Spatial Rel base ok", "Q4 Spatial Rel lora ok",
+        "Q5 Pairwise Dist gt", "Q5 Pairwise Dist base", "Q5 Pairwise Dist lora",
+        "Q5 Pairwise Dist base err", "Q5 Pairwise Dist lora err",
+        "Q6 EE Orient gt", "Q6 EE Orient base", "Q6 EE Orient lora",
+        "Q6 EE Orient base err°", "Q6 EE Orient lora err°",
+        "Q7 Grip Open gt", "Q7 Grip Open base", "Q7 Grip Open lora",
+        "Q7 Grip Open base err", "Q7 Grip Open lora err",
+        "Q8 Action gt", "Q8 Action base", "Q8 Action lora",
+        "Q8 Action base trans err", "Q8 Action base cos",
+        "Q8 Action base rot err", "Q8 Action base grip err",
+        "Q8 Action lora trans err", "Q8 Action lora cos",
+        "Q8 Action lora rot err", "Q8 Action lora grip err",
+    ]
+    md_lines.append("| " + " | ".join(ps_hdrs) + " |")
+    md_lines.append("| " + " | ".join(["---"] * len(ps_hdrs)) + " |")
+
+    for s in sample_details:
+        q1 = s.get("q1", {})
+        q1d = s.get("q1_dest", {})
+        q2 = s.get("q2", {})
+        q3 = s.get("q3", {})
+        q4 = s.get("q4", {})
+        q5 = s.get("q5", {})
+        q6 = s.get("q6", {})
+        q7 = s.get("q7", {})
+        q8 = s.get("q8", {})
+        desc = s.get("task_description", "")
+        desc_short = desc[:50] + ("…" if len(desc) > 50 else "")
+        cells = [
+            str(s.get("sample_id", "")),
+            desc_short,
+            s.get("target_object", "—") or "—",
+            # Q1
+            _xyz_fmt(q1.get("gt")), _xyz_fmt(q1.get("base_pred")), _xyz_fmt(q1.get("lora_pred")),
+            _mae_xyz_fmt(q1.get("base_err")), _mae_xyz_fmt(q1.get("lora_err")),
+            # Q2
+            _xyz_fmt(q2.get("gt")), _xyz_fmt(q2.get("base_pred")), _xyz_fmt(q2.get("lora_pred")),
+            _mae_xyz_fmt(q2.get("base_err")), _mae_xyz_fmt(q2.get("lora_err")),
+            # Q3
+            _xyz_fmt(q3.get("gt")), _xyz_fmt(q3.get("base_pred")), _xyz_fmt(q3.get("lora_pred")),
+            _mae_xyz_fmt(q3.get("base_err")), _mae_xyz_fmt(q3.get("lora_err")),
+            # Q4
+            _rel_fmt(q4.get("gt")), _rel_fmt(q4.get("base_pred")), _rel_fmt(q4.get("lora_pred")),
+            _q4_ok(q4.get("base_correct")), _q4_ok(q4.get("lora_correct")),
+            # Q5
+            _scalar_fmt(q5.get("gt")), _scalar_fmt(q5.get("base_pred")), _scalar_fmt(q5.get("lora_pred")),
+            _scalar_fmt(q5.get("base_err")), _scalar_fmt(q5.get("lora_err")),
+            # Q6
+            _euler_fmt(q6.get("gt")), _euler_fmt(q6.get("base_pred")), _euler_fmt(q6.get("lora_pred")),
+            _euler_fmt(q6.get("base_err_deg")), _euler_fmt(q6.get("lora_err_deg")),
+            # Q7
+            _scalar_fmt(q7.get("gt")), _scalar_fmt(q7.get("base_pred")), _scalar_fmt(q7.get("lora_pred")),
+            _scalar_fmt(q7.get("base_err")), _scalar_fmt(q7.get("lora_err")),
+            # Q8
+            _action7_fmt(q8.get("gt")), _action7_fmt(q8.get("base_pred")), _action7_fmt(q8.get("lora_pred")),
+            _xyz_fmt(q8.get("base_trans_err")), _scalar_fmt(q8.get("base_trans_cos_sim")),
+            _xyz_fmt(q8.get("base_rot_err")), _scalar_fmt(q8.get("base_grip_err")),
+            _xyz_fmt(q8.get("lora_trans_err")), _scalar_fmt(q8.get("lora_trans_cos_sim")),
+            _xyz_fmt(q8.get("lora_rot_err")), _scalar_fmt(q8.get("lora_grip_err")),
+        ]
+        md_lines.append("| " + " | ".join(cells) + " |")
 
     out_md_path = Path(args.out_md)
     out_md_path.parent.mkdir(parents=True, exist_ok=True)
@@ -636,15 +1075,180 @@ def main() -> None:
     }, indent=2))
     print(f"Wrote JSON         → {out_json_path}")
 
+    # ---- Save per-sample detail JSON -------------------------------------
+    detail_json_path = out_json_path.parent / out_json_path.name.replace(".json", "-samples.json")
+    detail_json_path.write_text(json.dumps(sample_details, indent=2))
+    print(f"Wrote per-sample   → {detail_json_path}")
+
     # ---- Console summary -------------------------------------------------
     print("\n=== Headline ===")
     for r in rows:
         delta = _delta_str(r["base_primary"], r["lora_primary"], r["lower_is_better"])
-        print(f"  {r['dim']:8s} {r['primary_metric']:20s} "
+        print(f"  {DIM_LABEL.get(r['dim'], r['dim']):24s} {r['primary_metric']:20s} "
               f"base={_fmt_metric(r['base_primary'])}  "
               f"lora={_fmt_metric(r['lora_primary'])}  "
               f"Δ={delta}  "
               f"parse={_fmt_metric(r['base_parse_rate'])}/{_fmt_metric(r['lora_parse_rate'])}")
+
+    # ---- CSV export (per-sample, base vs LoRA side-by-side) ----------------
+    if args.out_csv:
+        import csv
+        csv_path = Path(args.out_csv)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        def _expand3(v):
+            if isinstance(v, list) and len(v) == 3:
+                return [f"{x:.4f}" for x in v]
+            return ["", "", ""]
+
+        def _csv_scalar(v):
+            if v is None:
+                return ""
+            return f"{v:.4f}" if isinstance(v, float) else str(v)
+
+        def _csv_rel(v):
+            if isinstance(v, dict):
+                return f"{v.get('x','')}/{v.get('y','')}/{v.get('z','')}"
+            return ""
+
+        def _csv_q4ok(v):
+            if isinstance(v, dict):
+                return "{}/{}/{}".format(
+                    "T" if v.get("x") else "F",
+                    "T" if v.get("y") else "F",
+                    "T" if v.get("z") else "F",
+                )
+            return ""
+
+        def _csv_action7(v):
+            if isinstance(v, list) and len(v) == 7:
+                return ",".join(f"{x:.4f}" for x in v)
+            return ""
+
+        csv_hdrs = [
+            "sample_id", "suite", "task_id", "task_description",
+            "target_object", "dest_object",
+            # Q1
+            "Q1_SrcObj_gt_x", "Q1_SrcObj_gt_y", "Q1_SrcObj_gt_z",
+            "Q1_SrcObj_base_x", "Q1_SrcObj_base_y", "Q1_SrcObj_base_z",
+            "Q1_SrcObj_lora_x", "Q1_SrcObj_lora_y", "Q1_SrcObj_lora_z",
+            "Q1_SrcObj_base_err_x", "Q1_SrcObj_base_err_y", "Q1_SrcObj_base_err_z",
+            "Q1_SrcObj_lora_err_x", "Q1_SrcObj_lora_err_y", "Q1_SrcObj_lora_err_z",
+            # Q2
+            "Q2_Grip_gt_x", "Q2_Grip_gt_y", "Q2_Grip_gt_z",
+            "Q2_Grip_base_x", "Q2_Grip_base_y", "Q2_Grip_base_z",
+            "Q2_Grip_lora_x", "Q2_Grip_lora_y", "Q2_Grip_lora_z",
+            "Q2_Grip_base_err_x", "Q2_Grip_base_err_y", "Q2_Grip_base_err_z",
+            "Q2_Grip_lora_err_x", "Q2_Grip_lora_err_y", "Q2_Grip_lora_err_z",
+            # Q3
+            "Q3_Offset_gt_x", "Q3_Offset_gt_y", "Q3_Offset_gt_z",
+            "Q3_Offset_base_x", "Q3_Offset_base_y", "Q3_Offset_base_z",
+            "Q3_Offset_lora_x", "Q3_Offset_lora_y", "Q3_Offset_lora_z",
+            "Q3_Offset_base_err_x", "Q3_Offset_base_err_y", "Q3_Offset_base_err_z",
+            "Q3_Offset_lora_err_x", "Q3_Offset_lora_err_y", "Q3_Offset_lora_err_z",
+            # Q4
+            "Q4_SpatialRel_gt", "Q4_SpatialRel_base", "Q4_SpatialRel_lora",
+            "Q4_SpatialRel_base_ok", "Q4_SpatialRel_lora_ok",
+            # Q5
+            "Q5_PairDist_gt", "Q5_PairDist_base", "Q5_PairDist_lora",
+            "Q5_PairDist_base_err", "Q5_PairDist_lora_err",
+            # Q6
+            "Q6_Orient_gt_roll", "Q6_Orient_gt_pitch", "Q6_Orient_gt_yaw",
+            "Q6_Orient_base_roll", "Q6_Orient_base_pitch", "Q6_Orient_base_yaw",
+            "Q6_Orient_lora_roll", "Q6_Orient_lora_pitch", "Q6_Orient_lora_yaw",
+            "Q6_Orient_base_err_roll", "Q6_Orient_base_err_pitch", "Q6_Orient_base_err_yaw",
+            "Q6_Orient_lora_err_roll", "Q6_Orient_lora_err_pitch", "Q6_Orient_lora_err_yaw",
+            # Q7
+            "Q7_GripOpen_gt", "Q7_GripOpen_base", "Q7_GripOpen_lora",
+            "Q7_GripOpen_base_err", "Q7_GripOpen_lora_err",
+            # Q8
+            "Q8_Action_gt", "Q8_Action_base", "Q8_Action_lora",
+            "Q8_base_trans_err_x", "Q8_base_trans_err_y", "Q8_base_trans_err_z",
+            "Q8_base_trans_cos",
+            "Q8_base_rot_err_roll", "Q8_base_rot_err_pitch", "Q8_base_rot_err_yaw",
+            "Q8_base_grip_err",
+            "Q8_lora_trans_err_x", "Q8_lora_trans_err_y", "Q8_lora_trans_err_z",
+            "Q8_lora_trans_cos",
+            "Q8_lora_rot_err_roll", "Q8_lora_rot_err_pitch", "Q8_lora_rot_err_yaw",
+            "Q8_lora_grip_err",
+        ]
+
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(csv_hdrs)
+            for s in sample_details:
+                q1 = s.get("q1", {})
+                q2 = s.get("q2", {})
+                q3 = s.get("q3", {})
+                q4 = s.get("q4", {})
+                q5 = s.get("q5", {})
+                q6 = s.get("q6", {})
+                q7 = s.get("q7", {})
+                q8 = s.get("q8", {})
+                row = [
+                    s.get("sample_id", ""),
+                    s.get("suite", ""),
+                    s.get("task_id", ""),
+                    s.get("task_description", ""),
+                    s.get("target_object", ""),
+                    s.get("dest_object", ""),
+                    # Q1
+                    *_expand3(q1.get("gt")),
+                    *_expand3(q1.get("base_pred")),
+                    *_expand3(q1.get("lora_pred")),
+                    *_expand3(q1.get("base_err")),
+                    *_expand3(q1.get("lora_err")),
+                    # Q2
+                    *_expand3(q2.get("gt")),
+                    *_expand3(q2.get("base_pred")),
+                    *_expand3(q2.get("lora_pred")),
+                    *_expand3(q2.get("base_err")),
+                    *_expand3(q2.get("lora_err")),
+                    # Q3
+                    *_expand3(q3.get("gt")),
+                    *_expand3(q3.get("base_pred")),
+                    *_expand3(q3.get("lora_pred")),
+                    *_expand3(q3.get("base_err")),
+                    *_expand3(q3.get("lora_err")),
+                    # Q4
+                    _csv_rel(q4.get("gt")),
+                    _csv_rel(q4.get("base_pred")),
+                    _csv_rel(q4.get("lora_pred")),
+                    _csv_q4ok(q4.get("base_correct")),
+                    _csv_q4ok(q4.get("lora_correct")),
+                    # Q5
+                    _csv_scalar(q5.get("gt")),
+                    _csv_scalar(q5.get("base_pred")),
+                    _csv_scalar(q5.get("lora_pred")),
+                    _csv_scalar(q5.get("base_err")),
+                    _csv_scalar(q5.get("lora_err")),
+                    # Q6
+                    *_expand3(q6.get("gt")),
+                    *_expand3(q6.get("base_pred")),
+                    *_expand3(q6.get("lora_pred")),
+                    *_expand3(q6.get("base_err_deg")),
+                    *_expand3(q6.get("lora_err_deg")),
+                    # Q7
+                    _csv_scalar(q7.get("gt")),
+                    _csv_scalar(q7.get("base_pred")),
+                    _csv_scalar(q7.get("lora_pred")),
+                    _csv_scalar(q7.get("base_err")),
+                    _csv_scalar(q7.get("lora_err")),
+                    # Q8
+                    _csv_action7(q8.get("gt")),
+                    _csv_action7(q8.get("base_pred")),
+                    _csv_action7(q8.get("lora_pred")),
+                    *_expand3(q8.get("base_trans_err")),
+                    _csv_scalar(q8.get("base_trans_cos_sim")),
+                    *_expand3(q8.get("base_rot_err")),
+                    _csv_scalar(q8.get("base_grip_err")),
+                    *_expand3(q8.get("lora_trans_err")),
+                    _csv_scalar(q8.get("lora_trans_cos_sim")),
+                    *_expand3(q8.get("lora_rot_err")),
+                    _csv_scalar(q8.get("lora_grip_err")),
+                ]
+                writer.writerow(row)
+        print(f"Wrote CSV          → {csv_path}")
 
 
 if __name__ == "__main__":

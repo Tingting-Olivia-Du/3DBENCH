@@ -30,9 +30,9 @@ Usage
   # Override paths
 
 python scripts/02_run_vlm_eval.py \
-    --manifest data/gt-demo-libero-all-suite-train-0515/manifest.json \
-    --out_dir  rollout/debug/libero-train-qwen-0515-baseline-all-models-all-suite-selected-task \
-    --task_ids 0 1 \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir  rollout/baseline/libero-test-9-qwen-0515-baseline-all-models-all-suite \
+    --task_ids 9 \
     --prompt_yaml prompts/spatial_qa.yaml \
     --device   cuda:3
 
@@ -40,7 +40,7 @@ python scripts/02_run_vlm_eval.py \
 # 只跑 libero_spatial 的 task 0-2, demo 0 和 1
 
 python scripts/02_run_vlm_eval.py \
-    --manifest data/gt-demo-libero-all-suite-test-0515/manifest.json \
+    --manifest data/gt-demo-libero-all-suite-test-fix/manifest.json \
     --out_dir rollout/libero-test-qwen-0512 \
     --prompt_yaml prompts/spatial_qa.yaml \
     --device cuda:3 \
@@ -57,9 +57,127 @@ python scripts/02_run_vlm_eval.py \
     --suites libero_10 libero_object \
     --max_samples 100
 
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/libero-q8-baseline-demo0-1 \
+    --device cuda:3 \
+    --task_ids 9 \
+    --demo_indices 0 1
 
+# ==========================================================================
+# Per-dim LoRA eval — 每个 dim 可以分开跑在不同 GPU 上并行
+# manifest: val set (task_id=8)
+# lora_root: models/0515/qwen2.5-vl-3b-mv-lora
+# checkpoint: checkpoint-4000
+# out_dir: 所有 dim 写到同一个 out_dir，因为 slug 不同不会冲突
+# ==========================================================================
 
+# Q1
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q1/checkpoint-4000 \
+    --lora_dim q1 \
+    --device cuda:3 \
+    --task_ids 9
 
+# Q2
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q2/checkpoint-4000 \
+    --lora_dim q2 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q3
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q3/checkpoint-4000 \
+    --lora_dim q3 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q4
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q4/checkpoint-4000 \
+    --lora_dim q4 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q5
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q5/checkpoint-4000 \
+    --lora_dim q5 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q6
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-ckpt4000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q6/checkpoint-4000 \
+    --lora_dim q6 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q7
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-final \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q7/final \
+    --lora_dim q7 \
+    --device cuda:3 \
+    --task_ids 9
+
+# Q8
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-perdim-final \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/q8/final \
+    --lora_dim q8 \
+    --device cuda:3 \
+    --task_ids 9
+
+# ==========================================================================
+# All-in-one LoRA eval
+# 训练时: spatial_qa.yaml (完整 prompt, 问全部 Q1~Q8, assistant 回答全部字段)
+# eval时: dim="all" → 自动用 PromptBuilder() → spatial_qa.yaml (与训练一致)
+# 输出: 每条 sample 的 raw_response 包含 task_type + q1~q8 全部字段
+# ==========================================================================
+
+# all — final checkpoint
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-all-final \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/all/final \
+    --lora_dim all \
+    --device cuda:3 \
+    --task_ids 9
+
+# all — checkpoint-12000
+python scripts/02_run_vlm_eval.py \
+    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
+    --out_dir rollout/lora-all-ckpt12000 \
+    --models qwen2.5-vl-3b-mv-lora \
+    --lora_dir models/0515/qwen2.5-vl-3b-mv-lora/all/checkpoint-12000 \
+    --lora_dim all \
+    --device cuda:3 \
+    --task_ids 9
 
 """
 from __future__ import annotations
@@ -111,7 +229,7 @@ def parse_args() -> argparse.Namespace:
                         "When set, the model slug 'qwen2.5-vl-3b-mv-lora' loads it.")
     p.add_argument("--lora_dim", default=None,
                    choices=[None, "q1", "q2", "q3", "q4", "q5", "q6",
-                            "q7", "q8", "q9", "q10", "q11"],
+                            "q7", "q8", "all"],
                    help="Which dimension this LoRA targets. If omitted, read from "
                         "<lora_dir>/adapter_meta.json or <lora_dir>/../adapter_meta.json.")
     p.add_argument("--prompt_yaml", default=None,
@@ -704,16 +822,19 @@ class RandomBaseline(VLMBase):
             "q1": self._rand_pos(),
             "q1_dest": self._rand_pos(),
             "q2": self._rand_pos(),
-            "q3": {"can_close": "yes" if self._rng.random() > 0.5 else "no"},
-            "q4": self._rand_unit_vec(),
-            "q5": self._rand_delta(),
-            "q6": self._rand_relation(),
-            "q7": self._rand_euler(),
-            "q8": self._rand_euler(),
-            "q9": self._rand_euler(),
-            "q10": {"object_a": "obj_a", "object_b": "obj_b",
-                    "distance_m": float(self._rng.uniform(0.01, 0.50))},
-            "q11": {"openness": float(self._rng.uniform(0.0, 1.0))},
+            "q3": self._rand_delta(),
+            "q4": self._rand_relation(),
+            "q5": {"object_a": "obj_a", "object_b": "obj_b",
+                   "distance_m": float(self._rng.uniform(0.01, 0.50))},
+            "q6": self._rand_euler(),
+            "q7": {"openness": float(self._rng.uniform(0.0, 1.0))},
+            "q8": {"dx": float(self._rng.uniform(-1, 1)),
+                   "dy": float(self._rng.uniform(-1, 1)),
+                   "dz": float(self._rng.uniform(-1, 1)),
+                   "droll": float(self._rng.uniform(-1, 1)),
+                   "dpitch": float(self._rng.uniform(-1, 1)),
+                   "dyaw": float(self._rng.uniform(-1, 1)),
+                   "gripper": self._rng.choice([-1.0, 1.0])},
         }
         return json.dumps(response)
 
@@ -1012,20 +1133,22 @@ def main() -> None:
             dim = args.lora_dim
             if dim is None:
                 dim = getattr(model, "lora_meta", {}).get("dim")
-            if dim not in VALID_DIMS:
+            if dim is None or (dim not in VALID_DIMS and dim != "all"):
                 print(f"ERROR: could not determine LoRA dim (got {dim!r}); pass --lora_dim.")
                 _free_model(model)
                 continue
             # Override the instance slug so each dim writes to its own output dir.
-            # (Qwen25VL3B_LoRA also sets this from adapter_meta in __init__; we
-            # repeat here so a CLI --lora_dim wins over a stale meta file.)
             model.slug = f"qwen2.5-vl-3b-mv-lora-{dim}"
-            # If --prompt_yaml is supplied (e.g. CALVIN-aware per-dim prompts),
-            # honour it; otherwise PerDimPromptBuilder loads the default LIBERO
-            # template (prompts/spatial_qa_per_dim.yaml).
-            active_builder = PerDimPromptBuilder(dim, template_path=args.prompt_yaml)
-            tag = args.prompt_yaml if args.prompt_yaml else "default (LIBERO)"
-            print(f"  [LoRA] PerDimPromptBuilder({dim})  template={tag}  slug={model.slug}")
+            if dim == "all":
+                # All-in-one adapter uses the full multi-question prompt (spatial_qa.yaml).
+                active_builder = PromptBuilder(template_path=args.prompt_yaml)
+                tag = args.prompt_yaml if args.prompt_yaml else "default (spatial_qa.yaml)"
+                print(f"  [LoRA] PromptBuilder (all-dim)  template={tag}  slug={model.slug}")
+            else:
+                # Per-dim adapter uses the single-question prompt (spatial_qa_per_dim.yaml).
+                active_builder = PerDimPromptBuilder(dim, template_path=args.prompt_yaml)
+                tag = args.prompt_yaml if args.prompt_yaml else "default (spatial_qa_per_dim.yaml)"
+                print(f"  [LoRA] PerDimPromptBuilder({dim})  template={tag}  slug={model.slug}")
 
         try:
             run_model(
