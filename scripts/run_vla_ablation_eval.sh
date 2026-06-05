@@ -24,6 +24,9 @@ VLM4VLA_ROOT="$(dirname "$PROJECT_ROOT")/VLM4VLA"     # VLM4VLA/
 CONFIG_DIR="$PROJECT_ROOT/configs/vla_ablation"
 RESULTS_DIR="$PROJECT_ROOT/results/vla_ablation"
 
+# Use the vlmbench env interpreter (has lightning/flash-attn/etc.), not system python.
+PYTHON="${PYTHON:-$(dirname "$PROJECT_ROOT")/envs/vlmbench/bin/python}"
+
 # ── Eval config ────────────────────────────────────────────────────────
 CUDA_DEVICE=${CUDA_DEVICE:-0}
 EXECUTE_STEP=${EXECUTE_STEP:-1}
@@ -32,18 +35,22 @@ TASK_SUITES=("libero_spatial" "libero_object" "libero_goal" "libero_10")
 mkdir -p "$RESULTS_DIR"
 
 find_checkpoint() {
-    # Find the best/latest checkpoint for an experiment
+    # Find the best/latest checkpoint for an experiment.
+    # Search the whole experiment dir so it works whether ckpts live under
+    # <exp>/checkpoints/.../ (deep) or directly under <exp>/ (flat).
     local exp_name="$1"
-    local ckpt_root="$VLM4VLA_ROOT/runs/vla_ablation/${exp_name}/checkpoints"
+    local ckpt_root="$VLM4VLA_ROOT/runs/vla_ablation/${exp_name}"
 
     if [ ! -d "$ckpt_root" ]; then
         echo ""
         return
     fi
 
-    # Find the latest checkpoint directory (by date)
+    # Latest by step number in 'step=N.ckpt'; fall back to lexical sort.
     local latest
-    latest=$(find "$ckpt_root" -name "*.ckpt" -type f 2>/dev/null | sort | tail -1)
+    latest=$(find "$ckpt_root" -name "*.ckpt" -type f 2>/dev/null \
+             | sed -E 's/.*step=([0-9]+)\.ckpt/\1\t&/' \
+             | sort -n | tail -1 | cut -f2-)
     echo "$latest"
 }
 
@@ -67,7 +74,7 @@ run_eval() {
     echo "  GPU:        $CUDA_DEVICE"
     echo "================================================================"
 
-    local cmd="cd $VLM4VLA_ROOT && CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python eval/libero/run_libero_eval.py \
+    local cmd="cd $VLM4VLA_ROOT && PYTHONPATH=$VLM4VLA_ROOT CUDA_VISIBLE_DEVICES=$CUDA_DEVICE $PYTHON eval/libero/run_libero_eval.py \
         --ckpt_path $ckpt_path \
         --config_path $config_path \
         --execute_step $EXECUTE_STEP \

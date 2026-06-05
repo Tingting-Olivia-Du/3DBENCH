@@ -46,8 +46,8 @@
     "model_load_path": null,
     "model_load_source": "torch",
     "resume": null,
-    "model_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q1-Merged",
-    "model_config": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q1-Merged/config.json",
+    "model_path": "/workspace/ghsun/Qwen2.5-VL-3B-Instruct",
+    "model_config": "/workspace/ghsun/Qwen2.5-VL-3B-Instruct/config.json",
     "train_setup": {
         "precision": "bf16",
         "predict_action": true,
@@ -94,13 +94,13 @@
     "fwd_head": null,
     "tokenizer": {
         "type": "AutoProcessor",
-        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q1-Merged",
+        "pretrained_model_name_or_path": "/workspace/ghsun/Qwen2.5-VL-3B-Instruct",
         "tokenizer_type": "qwen25vl",
         "additional_special_tokens": null
     },
     "vlm": {
         "type": "Qwen2_5_VLForConditionalGeneration",
-        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q1-Merged",
+        "pretrained_model_name_or_path": "/workspace/ghsun/Qwen2.5-VL-3B-Instruct",
         "name": "qwen25vl"
     },
     "trainer": {
