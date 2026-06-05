@@ -30,6 +30,9 @@ PYTHON="${PYTHON:-$(dirname "$PROJECT_ROOT")/envs/vlmbench/bin/python}"
 # ── Eval config ────────────────────────────────────────────────────────
 CUDA_DEVICE=${CUDA_DEVICE:-0}
 EXECUTE_STEP=${EXECUTE_STEP:-1}
+# Episodes per task. Default 50 is slow under osmesa software rendering; override
+# with NUM_TRIALS=20 for faster (still statistically meaningful) sweeps.
+NUM_TRIALS=${NUM_TRIALS:-50}
 TASK_SUITES=("libero_spatial" "libero_object" "libero_goal" "libero_10")
 
 mkdir -p "$RESULTS_DIR"
@@ -81,6 +84,7 @@ run_eval() {
         --config_path $config_path \
         --execute_step $EXECUTE_STEP \
         --task_suite_name $suite \
+        --num_trials_per_task $NUM_TRIALS \
         --center_crop True"
 
     if [ "${DRY_RUN:-0}" = "1" ]; then
