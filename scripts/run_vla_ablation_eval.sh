@@ -74,7 +74,9 @@ run_eval() {
     echo "  GPU:        $CUDA_DEVICE"
     echo "================================================================"
 
-    local cmd="cd $VLM4VLA_ROOT && PYTHONPATH=$VLM4VLA_ROOT CUDA_VISIBLE_DEVICES=$CUDA_DEVICE $PYTHON eval/libero/run_libero_eval.py \
+    # MUJOCO_GL=osmesa: this headless host's EGL context is broken (EGLError ->
+    # SIGABRT on the first sim render). osmesa software rendering is reliable here.
+    local cmd="cd $VLM4VLA_ROOT && MUJOCO_GL=osmesa PYOPENGL_PLATFORM=osmesa PYTHONPATH=$VLM4VLA_ROOT CUDA_VISIBLE_DEVICES=$CUDA_DEVICE $PYTHON eval/libero/run_libero_eval.py \
         --ckpt_path $ckpt_path \
         --config_path $config_path \
         --execute_step $EXECUTE_STEP \
