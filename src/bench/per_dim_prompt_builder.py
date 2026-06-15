@@ -60,8 +60,22 @@ class PerDimPromptBuilder:
     def system_prompt(self) -> str:
         return self._system
 
-    def build_user_prompt(self, task_description: str) -> str:
-        return self._user_template.format(task_description=task_description).strip()
+    def build_user_prompt(
+        self, task_description: str, object_names: list[str] | None = None
+    ) -> str:
+        # Per-dim prompts are single-question; object_names is accepted for a
+        # uniform call signature with PromptBuilder but only used if the
+        # template references {object_names}.
+        kwargs = {"task_description": task_description}
+        if "{object_names}" in self._user_template:
+            kwargs["object_names"] = "\n".join(
+                f'    - "{n}"' for n in (object_names or [])
+            )
+        return self._user_template.format(**kwargs).strip()
 
-    def build(self, task_description: str) -> tuple[str, str]:
-        return self.system_prompt, self.build_user_prompt(task_description)
+    def build(
+        self, task_description: str, object_names: list[str] | None = None
+    ) -> tuple[str, str]:
+        return self.system_prompt, self.build_user_prompt(
+            task_description, object_names
+        )

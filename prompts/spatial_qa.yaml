@@ -1,11 +1,17 @@
 # Spatial QA prompt templates for VLM zero-shot spatial reasoning benchmark.
 #
 # Coordinate frame definition:
-#   Origin : robot arm base center (mounted on the workspace table)
+#   Origin : robot arm base center (mounted ON TOP OF the workspace table)
 #   X-axis : forward direction away from the robot, into the workspace (positive = further from robot)
 #   Y-axis : robot's RIGHT direction (positive = to the robot's right when facing forward)
-#   Z-axis : upward (positive = higher)
+#   Z-axis : upward (positive = higher). Because the base sits at table height,
+#            the TABLE SURFACE is Z ~ 0.0 m; objects on the table are Z ~ 0.0-0.06 m.
 #   Units  : meters
+#
+# All ground-truth values (see src/bench/gt_extractor.py) are world coordinates
+# with the robot-base position subtracted (pos_world - base_pos). The base z equals
+# the table-top z in every suite (kitchen 0.912, living-room 0.42, object-floor 0.0),
+# so the table surface maps to Z ~ 0.0 regardless of scene.
 #
 
 
@@ -77,52 +83,76 @@ system: |
     produce the same grasp. The effective yaw range is [-90, +90], but you should still distinguish the positive and negative values.
 
   WORKSPACE CONTEXT (approximate, for scale reference):
-  - The robot base is mounted ON TOP OF the workspace table, so the table surface
-    is at approximately Z = 0.0 m relative to the base (slightly negative, ≈ -0.01 m)
-  - Objects sitting on the table therefore have Z ≈ -0.02 to +0.05 m
-  - The gripper when reaching down to grasp an object is at Z ≈ 0.10 to 0.30 m
-  - The gripper when fully raised is at Z ≈ 0.40 to 0.60 m
-  - Workspace extends roughly: X from 0.10 to 0.80 m, Y from -0.35 to 0.35 m
-  - Typical manipulable objects are 5–15 cm in each dimension
-  - Robot maximum reach: ~0.85 m from the base
+  Z-AXIS ANCHORING (read carefully — Z is the hardest axis to estimate):
+  - The robot base is bolted ON TOP OF the workspace table. The table SURFACE is
+    the Z reference: table top ≈ Z = 0.0 m (objects rest on it). Everything is
+    measured relative to the robot base, and the base sits at table height, so the
+    table surface is ALWAYS Z ≈ 0.0 m in every scene.
+  - An object's reported position is the CENTER of its visible body: the X and Y
+    of its footprint, and a Z at HALF ITS STANDING HEIGHT (the middle of the
+    object's silhouette, halfway between where it touches the table and its top).
+    So a taller object has a larger Z, a flatter object has a smaller Z:
+      * Flat / thin objects (butter, cream cheese, books, plates):  Z ≈ 0.00 to +0.03 m
+      * Medium objects (soup/sauce cans, bowls, mugs, cartons):     Z ≈ +0.03 to +0.09 m
+      * Tall objects (bottles, baskets, wine racks, tall cabinets):  Z ≈ +0.10 to +0.18 m
+    Estimate Z as roughly (object's visible height) / 2. A 16 cm tall bottle
+    standing on the table has its center at Z ≈ +0.08 m; a flat book at Z ≈ +0.01 m.
+    Do NOT report Z above ~0.20 m for an object resting on the table.
+  - Gripper (end-effector) Z, by phase:
+      * Reaching DOWN to grasp an object on the table:  Z ≈ 0.05 to 0.12 m
+      * Lifted / carrying an object across the table:   Z ≈ 0.15 to 0.25 m
+      * Raised high (e.g. over a tall shelf/cabinet):    Z ≈ 0.28 to 0.35 m
+      * At the start of an episode (home pose):          Z ≈ 0.26 m
+    The gripper rarely exceeds Z ≈ 0.35 m; treat 0.40+ as implausible.
+  - Horizontal extent (base-relative): X (forward) ≈ 0.20 to 0.78 m,
+    Y (right/left) ≈ -0.30 to +0.30 m. Objects almost always sit at X ≈ 0.25 to 0.75 m.
+  - Typical manipulable objects are 5–15 cm in each dimension.
+  - Robot maximum reach: ~0.85 m from the base.
 
   TASK TYPES:
   - "pick_and_place": pick up an object and move it to a destination (e.g. a plate, basket, shelf)
   - "articulation": manipulate a fixed object in place (e.g. open a cabinet, turn on a stove)
+  - "compound": a pick-and-place that also has an articulation step
+    (e.g. "put the mug in the microwave and close it")
 
   OUTPUT FORMAT:
   You MUST respond with exactly one valid JSON object. Do NOT add any text, markdown,
   code fences, or explanation outside the JSON.
   The JSON must have exactly these top-level keys:
-  "task_type", "q1", "q1_dest", "q2", "q3", "q4", "q5", "q6", "q7", "q8".
+  "task_type", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8".
 
 user_template: |
   Task description: "{task_description}"
 
   Looking at the robot workspace image, answer all questions below.
   Your answer must be a single JSON object with keys:
-  task_type, q1, q1_dest, q2, q3, q4, q5, q6, q7, q8.
+  task_type, q1, q2, q3, q4, q5, q6, q7, q8.
 
   TASK_TYPE - CLASSIFY THE TASK:
   Is this a "pick_and_place" task (pick up an object and place it somewhere) or an
   "articulation" task (open/close/turn/push a fixed object with no separate destination)?
   Expected format: "task_type": "pick_and_place" or "task_type": "articulation"
 
-  Q1 - SOURCE OBJECT POSITION:
-  What is the 3D position [x, y, z] of the PRIMARY OBJECT currently being manipulated
-  (the object to pick up, or the articulated object such as a cabinet door)?
-  IMPORTANT: For multi-object tasks (e.g. "put both X and Y in the basket"), objects are
-  handled in the order they appear in the task description. The active target is the FIRST
-  object in the instruction that has NOT YET been placed at the destination. If the first
-  object is already at/near the destination, the active target switches to the next one.
-  Expected format: "q1": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
-
-  Q1_DEST - DESTINATION POSITION:
-  For "pick_and_place" tasks: what is the 3D position [x, y, z] of the DESTINATION
-  (the container, plate, shelf, or location where the object should be placed)?
-  For "articulation" tasks: set all values to null.
-  Expected format: "q1_dest": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
-              or   "q1_dest": {{"x": null, "y": null, "z": null}}
+  Q1 - OBJECT POSITIONS:
+  Report the 3D position [x, y, z] of EACH of the following objects (listed by their exact
+  scene/object names). Locate each one in the image and give its coordinates in the base
+  frame (meters):
+  {object_names}
+  Use EXACTLY the object names listed above as the JSON keys, character-for-character
+  (they are the scene object identifiers — do NOT rename, translate, or abbreviate them).
+  Each value is an object with x, y, z. Report a position for every listed object.
+  If an object is fully occluded or not visible, still give your best estimate (do NOT use null).
+  Expected format:
+    "q1": {{
+      "<exact object name from the list>": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}},
+      ...
+    }}
+  Example (if the listed objects were "alphabet_soup_1_main", "tomato_sauce_1_main", "basket_1_main"):
+    "q1": {{
+      "alphabet_soup_1_main": {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}},
+      "tomato_sauce_1_main":  {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}},
+      "basket_1_main":        {{"x": <float_meters>, "y": <float_meters>, "z": <float_meters>}}
+    }}
 
   Q2 - GRIPPER POSITION:
   What is the current 3D position [x, y, z] of the robot's end-effector (gripper center)?
@@ -139,15 +169,17 @@ user_template: |
   Q4 - SPATIAL RELATIONSHIP (LANGUAGE):
   Describe where the TARGET OBJECT is relative to the GRIPPER along each axis.
   Use ONLY the exact labels listed below (no other words):
-  - X-axis: "in_front" (target is further from robot base, X+), "behind" (target is closer to robot base, X-), or "aligned_x"
+  - X-axis: "in_front" (target is further from the gripper, X+), "behind" (target is closer to the base than the gripper, X-), or "aligned_x"
   - Y-axis: "right" (target is to the robot's right, Y+), "left" (target is to the robot's left, Y-), or "aligned_y"
   - Z-axis: "above" (target is higher, Z+), "below" (target is lower, Z-), or "aligned_z"
   Use "aligned_x"/"aligned_y"/"aligned_z" only if the offset on that axis is very small (a few centimeters or less).
   Expected format: "q4": {{"x": "in_front"|"behind"|"aligned_x", "y": "left"|"right"|"aligned_y", "z": "above"|"below"|"aligned_z"}}
 
   Q5 - PAIRWISE OBJECT DISTANCE:
-  Among ALL visible scene objects EXCEPT the target and its destination, find the two closest objects
-  and report their names and the Euclidean distance between them in meters.
+  Among ALL visible scene objects EXCEPT the target and its destination, find the two closest
+  DISTINCT objects (two SEPARATE physical objects — never two parts of the same object, e.g.
+  a microwave's body and its own door do NOT count as a pair) and report their names and the
+  Euclidean distance between them in meters.
   Expected format: "q5": {{"object_a": "<name>", "object_b": "<name>", "distance_m": <float>}}
 
   Q6 - END-EFFECTOR ORIENTATION:

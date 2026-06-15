@@ -87,6 +87,24 @@ def _parse_xyz(data: Any) -> list[float] | None:
         return None
 
 
+def _parse_object_positions(data: Any) -> dict[str, list[float]] | None:
+    """Parse the per-object Q1 dict {name: {x,y,z}} → {mujoco_name: [x, y, z]}.
+
+    Keys are the model's object names verbatim (only stripped of surrounding
+    whitespace). The Q1 prompt lists the explicit MuJoCo body names, so the
+    model echoes them back and they match the GT names directly — no
+    normalization needed. Returns None if no valid position is parsed.
+    """
+    if not isinstance(data, dict):
+        return None
+    out: dict[str, list[float]] = {}
+    for name, val in data.items():
+        xyz = _parse_xyz(val)
+        if xyz is not None:
+            out[str(name).strip()] = xyz
+    return out or None
+
+
 def _parse_delta(data: Any) -> list[float] | None:
     """Parse {"dx": ..., "dy": ..., "dz": ...} → [dx, dy, dz] without normalizing."""
     if not isinstance(data, dict):
@@ -155,7 +173,10 @@ def _parse_euler(data: Any) -> list[float] | None:
 
 
 def _parse_pairwise_distance(data: Any) -> dict | None:
-    """Parse {"object_a": str, "object_b": str, "distance_m": float}."""
+    """Parse {"object_a": str, "object_b": str, "distance_m": float}.
+
+    Object names are kept as-is (the prompt asks for MuJoCo body names).
+    """
     if not isinstance(data, dict):
         return None
     try:
@@ -246,8 +267,7 @@ class ResponseParser:
         raw                           – original response string
         parsed_ok                     – bool
         task_type                     – str or None
-        q1_object_pos                 – [x, y, z] or None
-        q1_dest_pos                   – [x, y, z] or None
+        q1_object_positions           – {mujoco_name: [x, y, z]} or None
         q2_gripper_pos                – [x, y, z] or None
         q3_gripper_to_target          – [dx, dy, dz] or None
         q4_spatial_relation           – {"x": str, "y": str, "z": str} or None
@@ -260,8 +280,7 @@ class ResponseParser:
             "raw": response_text,
             "parsed_ok": False,
             "task_type": None,
-            "q1_object_pos": None,
-            "q1_dest_pos": None,
+            "q1_object_positions": None,
             "q2_gripper_pos": None,
             "q3_gripper_to_target": None,
             "q4_spatial_relation": None,
@@ -277,22 +296,15 @@ class ResponseParser:
 
         # task_type classification
         tt = data.get("task_type")
-        if isinstance(tt, str) and tt in ("pick_and_place", "articulation"):
+        if isinstance(tt, str) and tt in ("pick_and_place", "articulation", "compound"):
             result["task_type"] = tt
 
-        # Q1 – source object position
+        # Q1 – per-object positions: {object_name: {x, y, z}}
         q1_raw = _resolve_subfield(
             data, "q1",
-            ("object_position", "target_position", "source_object_position"),
+            ("object_positions", "objects", "positions"),
         )
-        result["q1_object_pos"] = _parse_xyz(q1_raw)
-
-        # Q1_dest – destination position
-        q1d_raw = _resolve_subfield(data, "q1_dest", ("destination", "dest_position", "place_position"))
-        q1d = _parse_xyz(q1d_raw)
-        if q1d is not None and all(v is None or (isinstance(v, float) and v != v) for v in q1d):
-            q1d = None
-        result["q1_dest_pos"] = q1d
+        result["q1_object_positions"] = _parse_object_positions(q1_raw)
 
         # Q2 – gripper position
         q2_raw = _resolve_subfield(
@@ -333,7 +345,7 @@ class ResponseParser:
 
         result["parsed_ok"] = any(
             result[k] is not None
-            for k in ("q1_object_pos", "q2_gripper_pos", "q3_gripper_to_target",
+            for k in ("q1_object_positions", "q2_gripper_pos", "q3_gripper_to_target",
                        "q4_spatial_relation", "q6_eef_orientation_euler",
                        "q7_gripper_openness", "q8_next_action")
         )

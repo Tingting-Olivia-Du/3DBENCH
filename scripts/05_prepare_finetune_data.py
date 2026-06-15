@@ -76,6 +76,7 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from bench.per_dim_prompt_builder import PerDimPromptBuilder, VALID_DIMS
 from bench.prompt_builder import PromptBuilder
+from bench.gt_extractor import task_named_objects
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +129,7 @@ def build_assistant_payload(dim: str, gt: dict, dec_m: int, dec_unit: int) -> di
     """Return the dict the assistant should emit for `dim` given the sample's GT.
 
     New question numbering (May 2026):
-        Q1  – source object position       (GT: target_pos)
-        Q1_dest – dest position             (GT: dest_pos)
+        Q1  – per-object positions          (GT: targets_info + dest, by name)
         Q2  – gripper position              (GT: eef_pos)
         Q3  – gripper-to-target offset      (GT: gripper_to_target_delta)
         Q4  – spatial relation              (GT: gripper_to_target_relation)
@@ -139,10 +139,15 @@ def build_assistant_payload(dim: str, gt: dict, dec_m: int, dec_unit: int) -> di
         Q8  – 7-D action                    (GT: demo_action)
     """
     if dim == "q1":
+        # Per-object coordinates, keyed by human-readable object name, in the
+        # same order the eval prompt asks for them (targets, then destination).
+        q1 = {
+            obj["name"]: _xyz(obj["pos"], dec_m)
+            for obj in task_named_objects(gt)
+        }
         return {
             "task_type": gt["task_type"],
-            "q1":      _xyz(gt["target_pos"], dec_m),
-            "q1_dest": _xyz(gt.get("dest_pos"), dec_m),
+            "q1": q1,
         }
     if dim == "q2":
         return {"q2": _xyz(gt["eef_pos"], dec_m)}
@@ -245,7 +250,10 @@ def main() -> None:
             jsonl_path = dim_dir / f"{fold_name}.jsonl"
             with jsonl_path.open("w") as f:
                 for rec in recs:
-                    user_prompt = builder.build_user_prompt(rec["task_description"])
+                    obj_names = [o["name"] for o in task_named_objects(rec["gt"])]
+                    user_prompt = builder.build_user_prompt(
+                        rec["task_description"], obj_names
+                    )
                     payload = build_assistant_payload(
                         dim, rec["gt"], args.float_decimals_m, args.float_decimals_unit
                     )
@@ -274,7 +282,10 @@ def main() -> None:
         jsonl_path = all_dir / f"{fold_name}.jsonl"
         with jsonl_path.open("w") as f:
             for rec in recs:
-                user_prompt = all_builder.build_user_prompt(rec["task_description"])
+                obj_names = [o["name"] for o in task_named_objects(rec["gt"])]
+                user_prompt = all_builder.build_user_prompt(
+                    rec["task_description"], obj_names
+                )
                 payload = build_all_dim_payload(
                     rec["gt"], args.float_decimals_m, args.float_decimals_unit
                 )

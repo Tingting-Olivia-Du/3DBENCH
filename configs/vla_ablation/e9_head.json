@@ -40,9 +40,9 @@
     "use_vision_resampler": false,
     "vision_masked_ratio": 0.9,
     "use_tube_mask": false,
-    "output_root": "runs/vla_ablation/e9_head/checkpoints",
-    "log_root": "runs/vla_ablation/e9_head/logs",
-    "cache_root": "runs/vla_ablation/e9_head/cache",
+    "output_root": "runs/vla_ablation_flip_norm065/e9_head/checkpoints",
+    "log_root": "runs/vla_ablation_flip_norm065/e9_head/logs",
+    "cache_root": "runs/vla_ablation_flip_norm065/e9_head/cache",
     "model_load_path": null,
     "model_load_source": "torch",
     "resume": null,
@@ -88,6 +88,7 @@
         "fwd_pred_next_n": 1,
         "window_size": 1,
         "action_space": "continuous",
+        "loss_type": "l1_unified",
         "with_history": true,
         "history_type": "post"
     },
@@ -129,7 +130,8 @@
         "window_sample": "sliding",
         "organize_type": "interleave",
         "shuffle_buffer_size": 51200,
-        "train": true
+        "train": true,
+        "crop_scale": 0.9
     },
     "val_dataset": {
         "type": "LiberoActionPredictionDataset",
@@ -140,9 +142,11 @@
         "window_sample": "sliding",
         "organize_type": "interleave",
         "shuffle_buffer_size": 10000,
-        "train": false
+        "train": false,
+        "image_aug": true,
+        "crop_scale": 0.9
     },
-    "norm_action": false,
+    "norm_action": true,
     "norm_min": -0.65,
     "norm_max": 0.65,
     "_ablation_meta": {

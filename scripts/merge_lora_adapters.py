@@ -25,30 +25,30 @@ import torch
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent          # 3DBENCH/
-BASE_MODEL   = PROJECT_ROOT.parent / "models" / "Qwen2.5-VL-3B-Instruct"
-ADAPTER_ROOT = PROJECT_ROOT / "models" / "0515" / "qwen2.5-vl-3b-mv-lora"
-OUTPUT_ROOT  = PROJECT_ROOT.parent / "models" / "merged"
+MODELS_ROOT  = PROJECT_ROOT.parent / "models"                  # models/
+BASE_MODEL   = MODELS_ROOT / "Qwen2.5-VL-3B-Instruct"
+OUTPUT_ROOT  = MODELS_ROOT / "merged"
 
-# Map dimension -> best available checkpoint
+# Map dimension -> downloaded adapter tag. Adapters live at
+#   models/downloads_<dim>-<tag>/<dim>-<tag>/
 ADAPTER_MAP = {
-    "q1":  "final",
-    "q2":  "final",
-    "q3":  "checkpoint-4000",
-    "q4":  "checkpoint-4000",
-    "q5":  "checkpoint-4000",
-    "q6":  "checkpoint-4000",
-    "q7":  "final",
-    "q8":  "final",
-    "all": "final",
+    "q1": "final",
+    "q2": "final",
+    "q3": "ckpt4k",
+    "q4": "ckpt4k",
+    "q5": "ckpt4k",
+    "q6": "ckpt4k",
+    "q7": "final",
+    "q8": "final",
 }
 
 
 def find_adapter_path(dim: str) -> Path | None:
     """Return the adapter directory for a given dimension, or None."""
-    ckpt = ADAPTER_MAP.get(dim)
-    if ckpt is None:
+    tag = ADAPTER_MAP.get(dim)
+    if tag is None:
         return None
-    path = ADAPTER_ROOT / dim / ckpt
+    path = MODELS_ROOT / f"downloads_{dim}-{tag}" / f"{dim}-{tag}"
     if not (path / "adapter_config.json").exists():
         return None
     return path

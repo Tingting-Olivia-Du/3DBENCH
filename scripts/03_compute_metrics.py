@@ -4,8 +4,7 @@
 Reads ground truth from ``data/gt/manifest.json`` and model responses from
 ``data/responses/<model>/``, then computes per-model, per-question metrics:
 
-  Q1  (target object position)   → MAE/RMSE per axis + overall
-  Q1d (destination position)     → MAE/RMSE per axis + overall
+  Q1  (per-object positions)     → MAE/RMSE per axis + overall (over all named objects)
   Q2  (gripper position)         → MAE/RMSE per axis + overall
   Q3  (gripper→target offset)    → MAE/RMSE per axis + overall
   Q4  (spatial relation)         → Per-axis accuracy, macro-F1, all-axes accuracy
@@ -77,6 +76,7 @@ from bench.metrics import (
     spatial_relation_metrics,
 )
 from bench.output_parser import ResponseParser
+from bench.gt_extractor import task_named_objects
 
 
 # ---------------------------------------------------------------------------
@@ -237,8 +237,7 @@ def evaluate_model(
     verbose: bool = False,
 ) -> dict:
     """Return a metrics dict for one model, including per-sample comparison."""
-    gt_q1, pred_q1 = [], []
-    gt_q1d, pred_q1d = [], []   # destination position
+    gt_q1, pred_q1 = [], []     # per-object positions (one pair per named object)
     gt_q2, pred_q2 = [], []
     gt_q3, pred_q3 = [], []     # gripper-to-target offset vector
     gt_q4, pred_q4 = [], []     # spatial relation dicts
@@ -278,19 +277,24 @@ def evaluate_model(
         if gt_task_type and pred_task_type:
             task_type_correct.append(int(gt_task_type == pred_task_type))
 
-        # ---- Q1: source object position ----
-        gt_q1_val = _safe_list(gt.get("target_pos"))
-        pred_q1_val = _safe_list(parsed["q1_object_pos"])
-        if gt_q1_val and pred_q1_val:
-            gt_q1.append(gt_q1_val)
-            pred_q1.append(pred_q1_val)
-
-        # ---- Q1_dest: destination position ----
-        gt_q1d_val = _safe_list(gt.get("dest_pos"))
-        pred_q1d_val = _safe_list(parsed["q1_dest_pos"])
-        if gt_q1d_val and pred_q1d_val:
-            gt_q1d.append(gt_q1d_val)
-            pred_q1d.append(pred_q1d_val)
+        # ---- Q1: per-object positions ----
+        # The model reports a coordinate for EACH named object in the task.
+        # One sample contributes MULTIPLE (gt, pred) pairs, one per named object.
+        # gt_q1_val / pred_q1_val below hold the FIRST named object's positions,
+        # used only for the per-sample comparison table (which shows one xyz).
+        pred_objs = parsed.get("q1_object_positions") or {}
+        gt_q1_val = None
+        pred_q1_val = None
+        for obj in task_named_objects(gt):
+            obj_gt_pos = _safe_list(obj.get("pos"))
+            # Match by exact MuJoCo body name (the prompt lists these verbatim).
+            obj_pred_pos = _safe_list(pred_objs.get(obj["name"]))
+            if obj_gt_pos and obj_pred_pos:
+                gt_q1.append(obj_gt_pos)
+                pred_q1.append(obj_pred_pos)
+                if gt_q1_val is None:
+                    gt_q1_val = obj_gt_pos
+                    pred_q1_val = obj_pred_pos
 
         # ---- Q2: gripper position ----
         gt_q2_val = _safe_list(gt.get("eef_pos"))
@@ -375,10 +379,6 @@ def evaluate_model(
             [round(abs(p - g), 4) for p, g in zip(pred_q1_val, gt_q1_val)]
             if gt_q1_val and pred_q1_val else None
         )
-        q1d_err = (
-            [round(abs(p - g), 4) for p, g in zip(pred_q1d_val, gt_q1d_val)]
-            if gt_q1d_val and pred_q1d_val else None
-        )
         q2_err = (
             [round(abs(p - g), 4) for p, g in zip(pred_q2_val, gt_q2_val)]
             if gt_q2_val and pred_q2_val else None
@@ -446,15 +446,12 @@ def evaluate_model(
             },
             "target_object": gt.get("target_object_name"),
             "dest_object": gt.get("dest_object_name"),
+            # Q1 now has one prediction per named object; the per-sample table
+            # shows only the FIRST named object's gt/pred/err.
             "q1": {
                 "gt":   _round_list(gt_q1_val),
                 "pred": _round_list(pred_q1_val),
                 "abs_err_xyz": q1_err,
-            },
-            "q1_dest": {
-                "gt":   _round_list(gt_q1d_val),
-                "pred": _round_list(pred_q1d_val),
-                "abs_err_xyz": q1d_err,
             },
             "q2": {
                 "gt":   _round_list(gt_q2_val),
@@ -505,10 +502,6 @@ def evaluate_model(
         "q1": {
             **position_metrics(pred_q1, gt_q1),
             "parse_rate": len(pred_q1) / n_response if n_response > 0 else 0.0,
-        },
-        "q1_dest": {
-            **position_metrics(pred_q1d, gt_q1d),
-            "parse_rate": len(pred_q1d) / n_response if n_response > 0 else 0.0,
         },
         "q2": {
             **position_metrics(pred_q2, gt_q2),
@@ -755,7 +748,7 @@ def write_markdown_report(
     # --- Summary table ---
     lines.append("### Summary\n")
     hdrs = ["Model", "Run", "Parse %",
-            "Q1 Source Obj Pos MAE (m)", "Q1d Dest Pos MAE (m)",
+            "Q1 Object Pos MAE (m)",
             "Q2 Gripper Pos MAE (m)", "Q3 Grip→Target Offset MAE (m)",
             "Q4 Spatial Relation AccAll",
             "Q5 Pairwise Dist MAE (m)", "Q6 EE Orientation MAE (°)",
@@ -771,7 +764,6 @@ def write_markdown_report(
             f"`{m.get('run_timestamp', '—')}`",
             _p(m.get("parse_rate")),
             _f(m.get("q1", {}).get("mae_overall")),
-            _f(m.get("q1_dest", {}).get("mae_overall")),
             _f(m.get("q2", {}).get("mae_overall")),
             _f(m.get("q3", {}).get("mae_overall")),
             _f(m.get("q4", {}).get("acc_all")),
@@ -787,11 +779,11 @@ def write_markdown_report(
             _p(m.get("task_type_accuracy")) if m.get("task_type_accuracy") is not None else "—",
         ])
     rows = _highlight_best(rows, {
-        2: "higher", 3: "lower", 4: "lower", 5: "lower",
-        6: "lower", 7: "higher", 8: "lower", 9: "lower",
-        10: "lower", 11: "lower", 12: "higher", 13: "higher", 14: "higher",
-        15: "lower", 16: "higher",
-        17: "higher",
+        2: "higher", 3: "lower", 4: "lower",
+        5: "lower", 6: "higher", 7: "lower", 8: "lower",
+        9: "lower", 10: "lower", 11: "higher", 12: "higher", 13: "higher",
+        14: "lower", 15: "higher",
+        16: "higher",
     })
     lines.append(_md_table(hdrs, rows))
     lines.append("")
@@ -803,7 +795,7 @@ def write_markdown_report(
     # across models. Layout: for each Q-type, one row per model.
     rows2 = []
     for q_key, label in (
-        ("q1", "Q1 Source Obj Pos"), ("q1_dest", "Q1d Dest Pos"),
+        ("q1", "Q1 Object Pos"),
         ("q2", "Q2 Gripper Pos"), ("q3", "Q3 Grip→Target Offset"),
     ):
         group = []
@@ -927,8 +919,7 @@ def write_markdown_report(
         lines.append(f"### Per-Sample Detail  (`{slug}`, {len(samples)} samples)\n")
         hdrs4 = [
             "ID", "Task", "Target Obj",
-            "Q1 Source Obj gt", "Q1 Source Obj pred", "Q1 Source Obj MAE",
-            "Q1d Dest Pos gt", "Q1d Dest Pos pred", "Q1d Dest Pos MAE",
+            "Q1 Obj gt (1st)", "Q1 Obj pred (1st)", "Q1 Obj MAE (1st)",
             "Q2 Gripper Pos gt", "Q2 Gripper Pos pred", "Q2 Gripper Pos MAE",
             "Q3 Grip→Target gt", "Q3 Grip→Target pred", "Q3 Grip→Target MAE",
             "Q4 Spatial Rel gt", "Q4 Spatial Rel pred", "Q4 Spatial Rel correct",
@@ -997,9 +988,6 @@ def write_markdown_report(
                 _xyz(s.get("q1", {}), "gt"),
                 _xyz(s.get("q1", {}), "pred"),
                 _mae_xyz(s.get("q1", {})),
-                _xyz(s.get("q1_dest", {}), "gt"),
-                _xyz(s.get("q1_dest", {}), "pred"),
-                _mae_xyz(s.get("q1_dest", {})),
                 _xyz(s.get("q2", {}), "gt"),
                 _xyz(s.get("q2", {}), "pred"),
                 _mae_xyz(s.get("q2", {})),
@@ -1102,7 +1090,7 @@ def main() -> None:
         combined_slug = f"{prefix}-lora-combined"
         # Map Q key → dim that provides it
         _q_to_dim = {
-            "q1": "q1", "q1_dest": "q1", "q2": "q2", "q3": "q3",
+            "q1": "q1", "q2": "q2", "q3": "q3",
             "q4": "q4", "q5": "q5", "q6": "q6", "q7": "q7", "q8": "q8",
         }
         combined: dict = {
@@ -1320,12 +1308,9 @@ def main() -> None:
 
         csv_hdrs = [
             "model", "sample_id", "task_id", "task_description", "target_object", "dest_object",
-            "Q1_Source_Obj_gt_x", "Q1_Source_Obj_gt_y", "Q1_Source_Obj_gt_z",
-            "Q1_Source_Obj_pred_x", "Q1_Source_Obj_pred_y", "Q1_Source_Obj_pred_z",
-            "Q1_Source_Obj_err_x", "Q1_Source_Obj_err_y", "Q1_Source_Obj_err_z",
-            "Q1d_Dest_gt_x", "Q1d_Dest_gt_y", "Q1d_Dest_gt_z",
-            "Q1d_Dest_pred_x", "Q1d_Dest_pred_y", "Q1d_Dest_pred_z",
-            "Q1d_Dest_err_x", "Q1d_Dest_err_y", "Q1d_Dest_err_z",
+            "Q1_Obj_gt_x", "Q1_Obj_gt_y", "Q1_Obj_gt_z",
+            "Q1_Obj_pred_x", "Q1_Obj_pred_y", "Q1_Obj_pred_z",
+            "Q1_Obj_err_x", "Q1_Obj_err_y", "Q1_Obj_err_z",
             "Q2_Gripper_gt_x", "Q2_Gripper_gt_y", "Q2_Gripper_gt_z",
             "Q2_Gripper_pred_x", "Q2_Gripper_pred_y", "Q2_Gripper_pred_z",
             "Q2_Gripper_err_x", "Q2_Gripper_err_y", "Q2_Gripper_err_z",
@@ -1351,7 +1336,6 @@ def main() -> None:
             for slug, result in all_results.items():
                 for s in result.get("samples", []):
                     q1 = s.get("q1", {})
-                    q1d = s.get("q1_dest", {})
                     q2 = s.get("q2", {})
                     q3 = s.get("q3", {})
                     q4 = s.get("q4", {})
@@ -1383,9 +1367,6 @@ def main() -> None:
                         *_expand3(q1.get("gt")),
                         *_expand3(q1.get("pred")),
                         *_expand3(q1.get("abs_err_xyz")),
-                        *_expand3(q1d.get("gt")),
-                        *_expand3(q1d.get("pred")),
-                        *_expand3(q1d.get("abs_err_xyz")),
                         *_expand3(q2.get("gt")),
                         *_expand3(q2.get("pred")),
                         *_expand3(q2.get("abs_err_xyz")),

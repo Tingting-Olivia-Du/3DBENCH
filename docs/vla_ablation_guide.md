@@ -1,5 +1,48 @@
 # VLA Ablation Experiment Guide
 
+
+cd /workspace/tingting/VLM4VLA
+
+MUJOCO_GL=osmesa PYOPENGL_PLATFORM=osmesa \
+PYTHONPATH=/workspace/tingting/VLM4VLA \
+CUDA_VISIBLE_DEVICES=1 \
+/workspace/tingting/envs/vlmbench/bin/python eval/libero/run_libero_eval.py \
+  --ckpt_path "/workspace/tingting/VLM4VLA/runs/vla_ablation/e1_head/checkpoints/qwen25vl/vla_ablation_e1_head/2026-06-02/vla_ablation_e1_head_merged_Qwen2.5-VL-3B-q1-Merged-bs64-lr2e-05-ws1-FCDecoder-latent1-freeze_vision-freeze_textemb/epoch=18-step=40000.ckpt" \
+  --config_path /workspace/tingting/3DBENCH/configs/vla_ablation/e1_head.json \
+  --task_suite_name libero_10 \
+  --num_trials_per_task 5 \
+  --task_ids "0" \
+  --execute_step 1 \
+  --center_crop True
+
+
+
+
+cd /workspace/tingting/3DBENCH
+tmux new-session -d -s eval -n e1 "CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e1_head libero_10 2>&1 | tee /workspace/tingting/.tmp/eval_e1_head.log"
+tmux new-window -t eval -n e0 "CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e0_head libero_10 2>&1 | tee /workspace/tingting/.tmp/eval_e0_head.log"
+tmux new-window -t eval -n e2 "CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e2_head libero_10 2>&1 | tee /workspace/tingting/.tmp/eval_e2_head.log"
+tmux new-window -t eval -n e4 "CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e4_head libero_10 2>&1 | tee /workspace/tingting/.tmp/eval_e4_head.log"
+tmux attach -t eval     # 进去看;Ctrl-b 数字 切窗口,Ctrl-b d 脱离
+
+
+
+
+# 窗口1: e1_head
+CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e1_head libero_10
+
+# 窗口2: e0_head
+CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e0_head libero_10
+
+# 窗口3: e2_head
+CUDA_DEVICE=1 NUM_TRIALS=20 bash scripts/run_vla_ablation_eval.sh e2_head libero_10
+
+# 窗口4: e4_head
+
+CUDA_DEVICE=1 NUM_TRIALS=10  TASK_IDS="0" bash scripts/run_vla_ablation_eval.sh e0_head libero_10 2>&1 | tee /workspace/tingting/3DBENCH/results/vla_ablation/eval_e0_head.log
+
+
+
 ## 1. Overview
 
 本实验旨在回答一个核心研究问题：**3DBENCH 各维度的空间推理能力增强（通过 LoRA 微调）是否能提升下游 VLA 机器人操控性能？哪些空间能力最重要？**
@@ -253,7 +296,7 @@ cd /workspace/tingting/3DBENCH
 bash scripts/run_vla_ablation_eval.sh e0_full
 
 # 评估单个实验，指定 suite
-bash scripts/run_vla_ablation_eval.sh e0_full libero_spatial
+bash scripts/run_vla_ablation_eval.sh e1_head libero_spatial
 
 # 评估所有已完成的实验
 bash scripts/run_vla_ablation_eval.sh all

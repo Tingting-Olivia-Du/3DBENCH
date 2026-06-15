@@ -89,13 +89,118 @@ def get_robot_base_pos(sim) -> np.ndarray:
     return np.zeros(3)
 
 
+def _geom_world_z_extent(sim, gid: int) -> tuple[float, float] | None:
+    """Return the world-frame (z_min, z_max) of a single geom's bounding box.
+
+    Handles the primitive types plus mesh (by transforming mesh vertices).
+    Returns None for geom types we cannot bound (e.g. planes).
+    """
+    import mujoco
+
+    m, d = sim.model, sim.data
+    gtype = m.geom_type[gid]
+    size = m.geom_size[gid]
+    pos = d.geom_xpos[gid]
+    mat = d.geom_xmat[gid].reshape(3, 3)
+    T = mujoco.mjtGeom
+
+    if gtype == T.mjGEOM_BOX:
+        hs = size[:3]
+    elif gtype == T.mjGEOM_CYLINDER:
+        hs = np.array([size[0], size[0], size[1]])
+    elif gtype == T.mjGEOM_CAPSULE:
+        hs = np.array([size[0], size[0], size[1] + size[0]])
+    elif gtype == T.mjGEOM_SPHERE:
+        hs = np.array([size[0]] * 3)
+    elif gtype == T.mjGEOM_ELLIPSOID:
+        hs = size[:3]
+    elif gtype == T.mjGEOM_MESH:
+        dataid = m.geom_dataid[gid]
+        if dataid < 0:
+            return None
+        vadr = m.mesh_vertadr[dataid]
+        vnum = m.mesh_vertnum[dataid]
+        verts = m.mesh_vert[vadr:vadr + vnum].reshape(-1, 3)
+        world_z = (verts @ mat.T)[:, 2] + pos[2]
+        return float(world_z.min()), float(world_z.max())
+    else:
+        return None
+
+    # Axis-aligned z half-extent of an oriented box.
+    z_ext = (abs(mat[2, 0] * hs[0]) + abs(mat[2, 1] * hs[1]) + abs(mat[2, 2] * hs[2]))
+    return float(pos[2] - z_ext), float(pos[2] + z_ext)
+
+
+def _descendant_body_ids(sim, root_bid: int) -> list[int]:
+    """Return root_bid plus all bodies in its kinematic sub-tree.
+
+    Articulated objects (cabinets, stoves) keep their geometry on child bodies
+    (e.g. ``wooden_cabinet_1_cabinet_top``), so the center of the whole object
+    requires walking the sub-tree rather than reading only the ``_main`` body.
+    """
+    m = sim.model
+    ids = [root_bid]
+    i = 0
+    while i < len(ids):
+        cur = ids[i]
+        for bid in range(m.nbody):
+            if m.body_parentid[bid] == cur and bid != cur:
+                ids.append(bid)
+        i += 1
+    return ids
+
+
+def compute_object_center_z(sim, body_id: int, base_pos: np.ndarray) -> float | None:
+    """Return the base-relative Z of an object's visible geometry center.
+
+    Center = midpoint of the object's full collision-geometry bounding box in Z,
+    i.e. roughly ``bottom + half_height``. This is a visually locatable point
+    (the middle of the object's silhouette) rather than the internal body origin,
+    which can sit anywhere inside the mesh.
+
+    Aggregates over the body's whole kinematic sub-tree so articulated objects
+    are bounded correctly. Returns None if the object has no bounded geoms (the
+    caller should fall back to the body origin).
+    """
+    m = sim.model
+    z_min, z_max = None, None
+    for bid in _descendant_body_ids(sim, body_id):
+        for gid in range(m.ngeom):
+            if m.geom_bodyid[gid] != bid:
+                continue
+            # Collision geoms only (robosuite convention: group 0). Visual meshes
+            # (group 1) give a near-identical center (<=0.4 mm in practice) but are
+            # less robust, so we prefer collision geometry.
+            if m.geom_group[gid] != 0:
+                continue
+            ext = _geom_world_z_extent(sim, gid)
+            if ext is None:
+                continue
+            z_min = ext[0] if z_min is None else min(z_min, ext[0])
+            z_max = ext[1] if z_max is None else max(z_max, ext[1])
+    if z_min is None:
+        return None
+    return float((z_min + z_max) / 2.0 - base_pos[2])
+
+
 def get_all_object_positions(sim, base_pos: np.ndarray) -> dict[str, list[float]]:
-    """Return {body_name: [x,y,z]} for all scene-object bodies, relative to base."""
+    """Return {body_name: [x, y, z]} for all scene-object bodies, relative to base.
+
+    X and Y are the body-origin (column) position. Z is the visible-geometry
+    center (≈ bottom + half-height) so the model is asked to localize the middle
+    of the object's silhouette, not an invisible internal reference point. Falls
+    back to the body-origin Z when no bounded collision geometry is available.
+    """
     objects: dict[str, list[float]] = {}
     for name in sim.model.body_names:
         if is_scene_object_body(name):
             pos_world = sim.data.get_body_xpos(name).copy()
-            objects[name] = (pos_world - base_pos).tolist()
+            x = float(pos_world[0] - base_pos[0])
+            y = float(pos_world[1] - base_pos[1])
+            body_id = sim.model.body_name2id(name)
+            center_z = compute_object_center_z(sim, body_id, base_pos)
+            z = center_z if center_z is not None else float(pos_world[2] - base_pos[2])
+            objects[name] = [x, y, z]
     return objects
 
 
@@ -170,6 +275,9 @@ def _object_base_name(name: str) -> str:
     E.g. 'flat_stove_1_base' and 'flat_stove_1_button' both share the
     base name 'flat_stove_1'.  This lets us detect sub-parts of the same
     composite object so we don't pair them in Q10.
+
+    Deprecated in favour of :func:`_object_instance_id`, which does not rely
+    on a hand-maintained suffix whitelist. Kept for backward compatibility.
     """
     _PART_SUFFIXES = {
         "main", "base", "button", "handle", "lid", "knob", "door",
@@ -179,6 +287,27 @@ def _object_base_name(name: str) -> str:
     if len(parts) == 2 and parts[1].lower() in _PART_SUFFIXES:
         return parts[0]
     return name
+
+
+def _object_instance_id(name: str) -> str:
+    """Return the physical-object instance id for a MuJoCo body name.
+
+    Groups every sub-body of the same composite object under one id by
+    truncating at the first purely-numeric token (the instance index):
+        'microwave_1_main'         -> 'microwave_1'
+        'microwave_1_microdoorroot'-> 'microwave_1'
+        'flat_stove_1_base'        -> 'flat_stove_1'
+        'flat_stove_1_burner'      -> 'flat_stove_1'
+    This is whitelist-free (unlike :func:`_object_base_name`) so it correctly
+    de-duplicates ANY internal body name.
+    """
+    parts = name.split("_")
+    kept: list[str] = []
+    for p in parts:
+        kept.append(p)
+        if p.isdigit():
+            break
+    return "_".join(kept)
 
 
 def select_object_pair(
@@ -196,26 +325,40 @@ def select_object_pair(
 
     Returns (name_a, name_b) with name_a < name_b lexicographically,
     or None if fewer than 2 candidate objects exist.
+
+    Objects are de-duplicated to ONE representative body per physical instance
+    (by :func:`_object_instance_id`), so sub-parts of the same composite object
+    (e.g. microwave body + microwave door) are never paired together and a
+    single object never appears twice.
     """
-    exclude = {target_name}
+    # Exclude the target and destination by INSTANCE, so every sub-body of
+    # those objects is removed (not just the exact body name).
+    exclude_instances = {_object_instance_id(target_name)}
     if dest_name:
-        exclude.add(dest_name)
-    # Also exclude mount/base-like bodies that leak through
-    candidates = {
-        name: pos for name, pos in all_objects.items()
-        if name not in exclude and "mount" not in name.lower()
-    }
+        exclude_instances.add(_object_instance_id(dest_name))
+
+    # Collapse to one representative body per instance. Prefer the '_main'
+    # body; otherwise keep the first body seen for that instance.
+    rep_by_instance: dict[str, tuple[str, list[float]]] = {}
+    for name, pos in all_objects.items():
+        if "mount" in name.lower():
+            continue
+        inst = _object_instance_id(name)
+        if inst in exclude_instances:
+            continue
+        cur = rep_by_instance.get(inst)
+        if cur is None or (not cur[0].endswith("_main") and name.endswith("_main")):
+            rep_by_instance[inst] = (name, pos)
+
+    candidates = dict(rep_by_instance.values())
     if len(candidates) < 2:
         return None
 
     best_pair: tuple[str, str] | None = None
     best_dist = float("inf")
     for (a, pos_a), (b, pos_b) in combinations(candidates.items(), 2):
-        # Skip sub-parts of the same composite object
-        if _object_base_name(a) == _object_base_name(b):
-            continue
         d = float(np.linalg.norm(np.array(pos_a) - np.array(pos_b)))
-        # Skip zero-distance pairs (co-located sub-bodies)
+        # Skip zero-distance pairs (co-located bodies)
         if d < 1e-6:
             continue
         # Tie-break by lexicographic order
@@ -232,6 +375,9 @@ def compute_pairwise_distance(
     object_b: str,
 ) -> dict:
     """Compute Euclidean distance between two named objects.
+
+    ``object_a``/``object_b`` are the raw MuJoCo body names, matching the names
+    listed in the prompt and used everywhere else in the GT.
 
     Returns {"object_a", "object_b", "distance_m", "pos_a", "pos_b"}.
     """
@@ -355,6 +501,44 @@ def compute_release_windows(actions: np.ndarray, window: int = 5) -> set[int]:
 # Robosuite / LIBERO sim-based detection
 # ---------------------------------------------------------------------------
 
+def body_to_object_key(env, body_name: str) -> str:
+    """Map a MuJoCo body name to LIBERO's BDDL object key.
+
+    Target/destination objects are tracked by MuJoCo body name (e.g.
+    'alphabet_soup_1_main', 'wooden_cabinet_1_cabinet_top'), but the sim-state
+    lookups (goal predicates, grasp, placement) are keyed by the BDDL object id
+    (e.g. 'alphabet_soup_1', 'wooden_cabinet_1'). This converts between them.
+
+    Strategy (returns the first candidate that exists in the env's object dicts,
+    else the best textual guess):
+      1. the body name as-is
+      2. the body name with a trailing '_main' stripped
+      3. the instance id (truncate at the first numeric token)
+    """
+    candidates = [body_name]
+    if body_name.endswith("_main"):
+        candidates.append(body_name[: -len("_main")])
+    inst = _object_instance_id(body_name)
+    if inst not in candidates:
+        candidates.append(inst)
+
+    # Validate against whatever object dicts the env exposes.
+    inner = env.env if (env is not None and hasattr(env, "env")) else env
+    known: set[str] = set()
+    if inner is not None:
+        for attr in ("objects_dict", "object_states_dict"):
+            d = getattr(inner, attr, None)
+            if isinstance(d, dict):
+                known |= set(d.keys())
+    if known:
+        for c in candidates:
+            if c in known:
+                return c
+    # Fall back to the instance id (correct for both '_main' and multi-part
+    # bodies like 'wooden_cabinet_1_cabinet_top').
+    return inst
+
+
 def check_grasp_robosuite(env, object_name: str) -> bool:
     """Check if the gripper is grasping a specific object using robosuite's API.
 
@@ -363,7 +547,7 @@ def check_grasp_robosuite(env, object_name: str) -> bool:
 
     Args:
         env:          The LIBERO OffScreenRenderEnv (or its inner env).
-        object_name:  Object key in env.objects_dict (e.g. "alphabet_soup_1").
+        object_name:  MuJoCo body name OR BDDL object key; converted internally.
 
     Returns:
         True if the gripper is grasping the object.
@@ -371,10 +555,11 @@ def check_grasp_robosuite(env, object_name: str) -> bool:
     inner = env.env if hasattr(env, "env") else env
     if not hasattr(inner, "_check_grasp") or not hasattr(inner, "objects_dict"):
         return False
-    if object_name not in inner.objects_dict:
+    key = body_to_object_key(env, object_name)
+    if key not in inner.objects_dict:
         return False
     robot = inner.robots[0]
-    return bool(inner._check_grasp(robot.gripper, inner.objects_dict[object_name]))
+    return bool(inner._check_grasp(robot.gripper, inner.objects_dict[key]))
 
 
 def check_task_success(env) -> bool:
@@ -443,14 +628,17 @@ def check_object_placed(env, object_name: str) -> bool:
 
     Args:
         env:          The LIBERO OffScreenRenderEnv.
-        object_name:  Object key (e.g. "alphabet_soup_1").
+        object_name:  MuJoCo body name OR BDDL object key (e.g.
+                      "alphabet_soup_1_main" or "alphabet_soup_1"); converted
+                      to the BDDL key internally.
 
     Returns:
         True if the object satisfies its goal predicate.
     """
+    key = body_to_object_key(env, object_name)
     predicates = check_goal_predicates(env)
     for p in predicates:
-        if object_name in p["args"]:
+        if key in p["args"]:
             return p["satisfied"]
     return False
 
@@ -539,10 +727,58 @@ _PLACE_PREPOSITIONS = (
 )
 
 
+def _has_articulation_verb(desc_lower: str) -> bool:
+    """True if any articulation verb appears as a leading or whole-word token."""
+    return any(
+        desc_lower.startswith(v) or f" {v} " in desc_lower
+        for v in _ARTICULATION_VERBS
+    )
+
+
+# Phrasal-verb particles whose " on the " / " off the " must NOT be read as a
+# place-preposition, e.g. "turn on the stove", "switch off the light".
+_PHRASAL_ON_OFF_VERBS = ("turn", "switch")
+
+
+def _has_place_destination(desc_lower: str) -> bool:
+    """True if the description contains a place-preposition (source → destination).
+
+    Guards against false positives where " on the " is actually the particle of
+    a phrasal articulation verb ("turn on the ...", "switch off the ...").
+    """
+    for prep in _PLACE_PREPOSITIONS:
+        idx = desc_lower.find(prep)
+        if idx == -1:
+            continue
+        # Reject " on the " / " off the " when it belongs to a phrasal verb.
+        if prep in (" on the ",):
+            preceding = desc_lower[:idx].rstrip().rsplit(" ", 1)
+            if preceding and preceding[-1] in _PHRASAL_ON_OFF_VERBS:
+                # try a later occurrence of this same prep before giving up
+                later = desc_lower.find(prep, idx + 1)
+                if later == -1:
+                    continue
+            return True
+        return True
+    return False
+
+
 def classify_task(task_description: str) -> str:
-    """Return 'pick_and_place' or 'articulation' based on the task description."""
+    """Classify a task as 'pick_and_place', 'articulation', or 'compound'.
+
+    - 'compound': a pick-and-place with a place destination AND a trailing
+      articulation step, e.g. "put the mug in the microwave and close it".
+    - 'articulation': pure articulation with no place destination, e.g.
+      "open the top drawer of the cabinet".
+    - 'pick_and_place': a place with no articulation verb.
+    """
     desc_lower = task_description.lower()
-    if any(desc_lower.startswith(v) or f" {v} " in desc_lower for v in _ARTICULATION_VERBS):
+    has_artic = _has_articulation_verb(desc_lower)
+    has_dest = _has_place_destination(desc_lower)
+
+    if has_artic and has_dest:
+        return "compound"
+    if has_artic:
         return "articulation"
     return "pick_and_place"
 
@@ -597,7 +833,8 @@ def find_destination_object(
     Looks at the part of the task description after the place-preposition and
     scores body names against that phrase. Excludes the source object.
 
-    Returns (body_name, position_array) or (None, None) for articulation tasks.
+    Returns (body_name, position_array) or (None, None) for pure articulation
+    tasks. Compound tasks (place + trailing articulation) DO have a destination.
     """
     if classify_task(task_description) == "articulation":
         return None, None
@@ -623,6 +860,53 @@ def find_destination_object(
         return None, None
 
     return best, np.array(candidates[best])
+
+
+# ----- Human-readable object names -------------------------------------
+
+
+def task_named_objects(gt: dict) -> list[dict]:
+    """Return the task-relevant named objects for the per-object coordinate Q.
+
+    Reads an already-extracted GT dict and returns an ordered, de-duplicated
+    list of objects the model should localize: every target (in task order)
+    followed by the destination (if any). Each entry is:
+        {"name": <MuJoCo body name>, "body": <MuJoCo body name>, "pos": [x, y, z]}
+
+    Names are the raw MuJoCo body names (e.g. "white_yellow_mug_1_main"); the
+    Q1 prompt lists these explicitly so the model echoes them back verbatim and
+    GT/prediction match exactly. ``name`` and ``body`` are kept identical for
+    backward compatibility with callers that read either key.
+
+    This is the single source of truth shared by the prompt builder (which
+    object names to ask for) and the metrics scorer (the GT position for each).
+    """
+    entries: list[dict] = []
+    seen: set[str] = set()
+
+    def _add(body: str, pos) -> None:
+        if not body or body in seen or pos is None:
+            return
+        seen.add(body)
+        entries.append({
+            "name": body,
+            "body": body,
+            "pos": list(pos),
+        })
+
+    # Targets first, in task order (targets_info preserves description order).
+    for info in gt.get("targets_info") or []:
+        _add(info.get("name"), info.get("pos"))
+
+    # Fall back to single target if targets_info is absent.
+    if not entries and gt.get("target_object_name"):
+        _add(gt["target_object_name"], gt.get("target_pos"))
+
+    # Destination last.
+    if gt.get("dest_object_name"):
+        _add(gt["dest_object_name"], gt.get("dest_pos"))
+
+    return entries
 
 
 # ----- Multi-target support --------------------------------------------

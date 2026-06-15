@@ -30,12 +30,22 @@ Usage
   # Override paths
 
 python scripts/02_run_vlm_eval.py \
-    --manifest data/gt-demo-libero-all-suite-train-fix/manifest.json \
-    --out_dir  rollout/baseline/libero-test-9-qwen-0515-baseline-all-models-all-suite \
+    --manifest data/test0616/gt-demo-libero-test-long-time-fix-active-obj/manifest.json \
+    --out_dir  rollout/test/libero-test-long-time-fix-active-obj-0612 \
+    --models qwen2.5-vl-3b \
     --task_ids 9 \
     --prompt_yaml prompts/spatial_qa.yaml \
-    --device   cuda:3
+    --device   cuda:7
 
+
+python scripts/02_run_vlm_eval.py \
+    --manifest data/test0616/gt-demo-libero-test-long-time-fix-active-obj/manifest.json \
+    --out_dir  rollout/test/libero-test-long-time-fix-active-obj-0612 \
+    --models qwen2.5-vl-3b --task_ids 9 \
+    --prompt_yaml prompts/spatial_qa.yaml \
+    --save_prompt \
+    --device cuda:7
+/workspace/tingting/3DBENCH/data/test0616/gt-demo-libero-test-long-time-fix-active-obj/manifest.json
 
 # 只跑 libero_spatial 的 task 0-2, demo 0 和 1
 
@@ -185,6 +195,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import re as _re
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -200,6 +211,7 @@ import numpy as np
 from tqdm import tqdm
 
 from bench.prompt_builder import PromptBuilder
+from bench.gt_extractor import task_named_objects
 
 
 # ---------------------------------------------------------------------------
@@ -817,10 +829,13 @@ class RandomBaseline(VLMBase):
         user_prompt: str,
         max_new_tokens: int = 512,
     ) -> str:
+        # Q1 is now a per-object dict. Recover the requested object names from
+        # the bulleted list in the user prompt ('    - "name"').
+        obj_names = _re.findall(r'-\s+"([^"]+)"', user_prompt)
+        q1 = {name: self._rand_pos() for name in obj_names} or {"object": self._rand_pos()}
         response = {
-            "task_type": self._rng.choice(["pick_and_place", "articulation"]),
-            "q1": self._rand_pos(),
-            "q1_dest": self._rand_pos(),
+            "task_type": self._rng.choice(["pick_and_place", "articulation", "compound"]),
+            "q1": q1,
             "q2": self._rand_pos(),
             "q3": self._rand_delta(),
             "q4": self._rand_relation(),
@@ -1029,7 +1044,10 @@ def run_model(
 
         task_desc = record["task_description"]
 
-        system_prompt, user_prompt = builder.build(task_desc)
+        # Explicit per-object list for Q1 (targets + destination, in task order).
+        object_names = [o["name"] for o in task_named_objects(record.get("gt", {}))]
+
+        system_prompt, user_prompt = builder.build(task_desc, object_names)
 
         t0 = time.perf_counter()
         sample_ts = datetime.datetime.now().isoformat(timespec="seconds")
@@ -1083,9 +1101,22 @@ def main() -> None:
         sys.exit(1)
 
     manifest = json.loads(manifest_path.read_text())
-    # image_path in manifest is always relative to the repo's data/ directory
-    data_root = Path(__file__).resolve().parent.parent / "data"
+    # image_path in the manifest is relative to the GT output dir's PARENT
+    # (see 01_extract_gt.py: data_root = base_out_dir.parent). The manifest
+    # lives at <out_dir>/manifest.json, so its grandparent is that data_root.
+    # Derive it from the manifest location instead of hard-coding 'data/', so
+    # nested output dirs (e.g. data/test0616/gt-demo-.../) resolve correctly.
+    data_root = manifest_path.resolve().parent.parent
+    # Robustness: if the derived root doesn't actually contain the first
+    # sample's image, fall back to the repo's data/ dir (legacy layout).
+    if manifest:
+        _first = manifest[0].get("image_paths", {}).get("agent") or manifest[0].get("image_path")
+        if _first and not (data_root / _first).exists():
+            _legacy = Path(__file__).resolve().parent.parent / "data"
+            if (_legacy / _first).exists():
+                data_root = _legacy
     print(f"Loaded {len(manifest)} samples from {manifest_path}")
+    print(f"Image data_root: {data_root}")
 
     # ── Filter manifest based on CLI flags ───────────────────────────────
     if args.suites and "all" not in args.suites:

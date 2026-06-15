@@ -33,6 +33,7 @@ from bench.metrics import (
     spatial_relation_metrics,
 )
 from bench.output_parser import ResponseParser
+from bench.gt_extractor import task_named_objects
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +117,7 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
     """Compute metrics for a subset of samples (one suite × one model).
 
     Question numbering (new):
-      Q1  – target object position        (position_metrics)
-      Q1d – destination position           (position_metrics)
+      Q1  – per-object positions           (position_metrics, over all named objects)
       Q2  – gripper position               (position_metrics)
       Q3  – gripper-to-target offset       (position_metrics)
       Q4  – spatial relation               (spatial_relation_metrics)
@@ -126,8 +126,7 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
       Q7  – gripper openness               (scalar_metrics)
       Q8  – 7D next action                 (custom)
     """
-    gt_q1, pred_q1 = [], []
-    gt_q1d, pred_q1d = [], []
+    gt_q1, pred_q1 = [], []     # per-object positions (one pair per named object)
     gt_q2, pred_q2 = [], []
     gt_q3, pred_q3 = [], []     # gripper-to-target offset vector
     gt_q4, pred_q4 = [], []     # spatial relation dicts
@@ -154,17 +153,14 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
         if gt_task_type and pred_task_type:
             task_type_correct.append(int(gt_task_type == pred_task_type))
 
-        # Q1: source object position
-        gt_q1_val = _safe_list(gt.get("target_pos"))
-        pred_q1_val = _safe_list(parsed["q1_object_pos"])
-        if gt_q1_val and pred_q1_val:
-            gt_q1.append(gt_q1_val); pred_q1.append(pred_q1_val)
-
-        # Q1_dest: destination position
-        gt_q1d_val = _safe_list(gt.get("dest_pos"))
-        pred_q1d_val = _safe_list(parsed["q1_dest_pos"])
-        if gt_q1d_val and pred_q1d_val:
-            gt_q1d.append(gt_q1d_val); pred_q1d.append(pred_q1d_val)
+        # Q1: per-object positions (one (gt, pred) pair per named object)
+        pred_objs = parsed.get("q1_object_positions") or {}
+        for obj in task_named_objects(gt):
+            obj_gt_pos = _safe_list(obj.get("pos"))
+            # Match by exact MuJoCo body name (the prompt lists these verbatim).
+            obj_pred_pos = _safe_list(pred_objs.get(obj["name"]))
+            if obj_gt_pos and obj_pred_pos:
+                gt_q1.append(obj_gt_pos); pred_q1.append(obj_pred_pos)
 
         # Q2: gripper position
         gt_q2_val = _safe_list(gt.get("eef_pos"))
@@ -244,8 +240,6 @@ def _evaluate_samples(manifest_subset: list[dict], responses: dict[int, dict],
         "task_type_accuracy": float(np.mean(task_type_correct)) if task_type_correct else None,
         "q1":     {**position_metrics(pred_q1, gt_q1),
                    "parse_rate": len(pred_q1) / n_response if n_response else 0.0},
-        "q1_dest":{**position_metrics(pred_q1d, gt_q1d),
-                   "parse_rate": len(pred_q1d) / n_response if n_response else 0.0},
         "q2":     {**position_metrics(pred_q2, gt_q2),
                    "parse_rate": len(pred_q2) / n_response if n_response else 0.0},
         "q3":     {**position_metrics(pred_q3, gt_q3),
@@ -391,7 +385,7 @@ def main() -> None:
 
         # Summary table
         hdrs = ["Model", "Run", "N", "Parse%",
-                "Q1 MAE", "Q1d MAE", "Q2 MAE",
+                "Q1 MAE", "Q2 MAE",
                 "Q3 MAE", "Q4 AccAll",
                 "Q5 MAE", "Q6 MAE (°)",
                 "Q7 MAE", "Q8 TransMAE", "Q8 GripAcc",
@@ -407,7 +401,6 @@ def main() -> None:
                 str(m.get("n_total", "—")),
                 _p(m.get("parse_rate")),
                 _f(m.get("q1", {}).get("mae_overall")),
-                _f(m.get("q1_dest", {}).get("mae_overall")),
                 _f(m.get("q2", {}).get("mae_overall")),
                 _f(m.get("q3", {}).get("mae_overall")),
                 _f(m.get("q4", {}).get("acc_all")),
@@ -430,7 +423,7 @@ def main() -> None:
             if m is None:
                 continue
             for q_key, label in (
-                ("q1", "Q1 source"), ("q1_dest", "Q1 dest"),
+                ("q1", "Q1 object"),
                 ("q2", "Q2 gripper"), ("q3", "Q3 offset"),
             ):
                 qm = m.get(q_key, {})

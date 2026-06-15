@@ -5,7 +5,17 @@
 ```bash
 cd 3DBENCH
 conda activate /workspace/tingting/envs/vlmbench
+
+
+
+CONFIG_DIR=$PWD/configs/vla_ablation_fm \
+CUDA_VISIBLE_DEVICES=1 MASTER_PORT=6051 \
+bash ./scripts/run_vla_ablation.sh e1_full
+
 ```
+
+
+
 
 ---
 

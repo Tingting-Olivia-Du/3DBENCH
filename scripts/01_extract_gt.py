@@ -23,6 +23,12 @@ Usage
       --n_demos 10 \
       --out_dir data/gt-demo-libero-all-suite-train-fix
 
+   python scripts/01_extract_gt.py \
+      --suite libero_10 \
+      --n_traj_frames 80 \
+      --n_demos 10 \
+      --out_dir data/gt-demo-libero-long-time-fix-active-obj
+
   # Extract from all suites, 3 demos each, 20 frames
   python scripts/01_extract_gt.py \
       --suite all \

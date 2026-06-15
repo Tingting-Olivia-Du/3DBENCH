@@ -1,7 +1,7 @@
 {
     "robovlm_name": "RoboQwen25VL",
     "parent": null,
-    "task_name": "vla_ablation_e2_full",
+    "task_name": "vla_ablation_e7_full_fm",
     "model": "qwen25vl",
     "model_url": "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct",
     "seq_len": 1,
@@ -40,14 +40,14 @@
     "use_vision_resampler": false,
     "vision_masked_ratio": 0.9,
     "use_tube_mask": false,
-    "output_root": "runs/vla_ablation_flip_norm065/e2_full/checkpoints",
-    "log_root": "runs/vla_ablation_flip_norm065/e2_full/logs",
-    "cache_root": "runs/vla_ablation_flip_norm065/e2_full/cache",
+    "output_root": "runs/vla_ablation_fm/e7_full/checkpoints",
+    "log_root": "runs/vla_ablation_fm/e7_full/logs",
+    "cache_root": "runs/vla_ablation_fm/e7_full/cache",
     "model_load_path": null,
     "model_load_source": "torch",
     "resume": null,
-    "model_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q2-Merged",
-    "model_config": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q2-Merged/config.json",
+    "model_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q7-Merged",
+    "model_config": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q7-Merged/config.json",
     "train_setup": {
         "precision": "bf16",
         "predict_action": true,
@@ -80,28 +80,54 @@
     },
     "act_encoder": null,
     "act_head": {
-        "type": "FCDecoder",
+        "type": "FMDecoder",
         "hidden_size": 1024,
         "action_dim": 7,
         "down_sample": "none",
         "latent": 1,
-        "fwd_pred_next_n": 1,
+        "fwd_pred_next_n": 4,
         "window_size": 1,
         "action_space": "continuous",
-        "loss_type": "l1_unified",
         "with_history": true,
-        "history_type": "post"
+        "history_type": "post",
+        "DiTConfig": {
+            "input_embedding_dim": 1536,
+            "num_layers": 12,
+            "num_attention_heads": 16,
+            "attention_head_dim": 96,
+            "dropout": 0.0,
+            "attention_bias": true,
+            "activation_fn": "gelu-approximate",
+            "norm_type": "ada_norm",
+            "norm_elementwise_affine": false,
+            "norm_eps": 1e-05,
+            "max_num_positional_embeddings": 512,
+            "final_dropout": true,
+            "positional_embeddings": "sinusoidal",
+            "interleave_self_attention": false,
+            "cross_attention_dim": 2048,
+            "output_dim": 1024
+        },
+        "add_pos_embed": true,
+        "num_inference_timesteps": 20,
+        "num_timestep_buckets": 1000,
+        "noise_beta_alpha": 1.5,
+        "noise_beta_beta": 1.0,
+        "noise_s": 0.999,
+        "state_dim": 0,
+        "num_target_vision_tokens": 32,
+        "max_seq_len": 1024
     },
     "fwd_head": null,
     "tokenizer": {
         "type": "AutoProcessor",
-        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q2-Merged",
+        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q7-Merged",
         "tokenizer_type": "qwen25vl",
         "additional_special_tokens": null
     },
     "vlm": {
         "type": "Qwen2_5_VLForConditionalGeneration",
-        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q2-Merged",
+        "pretrained_model_name_or_path": "/workspace/tingting/models/merged/Qwen2.5-VL-3B-q7-Merged",
         "name": "qwen25vl"
     },
     "trainer": {
@@ -150,9 +176,10 @@
     "norm_min": -0.65,
     "norm_max": 0.65,
     "_ablation_meta": {
-        "experiment_id": "e2",
-        "dimension": "q2",
+        "experiment_id": "e7",
+        "dimension": "q7",
         "strategy": "full",
-        "label": "q2 LoRA merged"
+        "label": "q7 LoRA merged",
+        "action_head": "FMDecoder"
     }
 }
