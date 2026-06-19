@@ -53,6 +53,6 @@ $PIP install tensorboardX
 # 12) timm — required by prismatic (vision backbone registry); missing from
 #     prismatic's install_requires when installed with --no-deps (step 6).
 #     Without this, `import prismatic` raises ModuleNotFoundError: No module named 'timm'.
-$PIP install timm
+$PIP install "timm==1.0.27"
 
 echo "[setup_rlds_env] done. Prefix: $ENV_PREFIX"
