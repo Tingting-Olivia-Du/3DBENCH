@@ -55,4 +55,10 @@ $PIP install tensorboardX
 #     Without this, `import prismatic` raises ModuleNotFoundError: No module named 'timm'.
 $PIP install "timm==1.0.27"
 
+# 13) omegaconf — imported by vlm4vla.data.calvin_dataset, which is pulled in
+#     by vlm4vla/data/__init__.py. Without it, `from vlm4vla.data import
+#     OpenVLADataset` (and main.py) raise ModuleNotFoundError: No module named
+#     'omegaconf'.
+$PIP install "omegaconf==2.3.1"
+
 echo "[setup_rlds_env] done. Prefix: $ENV_PREFIX"
