@@ -7,7 +7,8 @@
 #
 #   # Single experiment on all suites, GPU 6, osmesa rendering
 #   CUDA_DEVICE=6 MUJOCO_GL=osmesa bash scripts/run_vla_ablation_eval.sh e0_full
-#   CUDA_DEVICE=7 bash scripts/run_vla_ablation_eval.sh e1_full
+#   CUDA_DEVICE=7 bash scripts/run_vla_ablation_eval.sh e0_full_dualcam_bs256
+
 #   # One suite only, with live wandb success-rate curves
 #   USE_WANDB=1 bash scripts/run_vla_ablation_eval.sh e0_full libero_10
 #
@@ -31,17 +32,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"                       # 3DBENCH/
 VLM4VLA_ROOT=${VLM4VLA_ROOT:-"$(dirname "$PROJECT_ROOT")/VLM4VLA"}   # VLM4VLA/
-# CONFIG_DIR=${CONFIG_DIR:-"$PROJECT_ROOT/configs/vla_ablation"}
-CONFIG_DIR=${CONFIG_DIR:-"$PROJECT_ROOT/configs/vla_ablation_fm"}
-# RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_flip_norm065"}
-RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_fm"}
+CONFIG_DIR=${CONFIG_DIR:-"$PROJECT_ROOT/configs/vla_ablation_rlds"}
+# CONFIG_DIR=${CONFIG_DIR:-"$PROJECT_ROOT/configs/vla_ablation_fm"}
+RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_rlds"}
+# RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_fm"}
 # Subdir under VLM4VLA/runs/ holding the checkpoints. Must match the configs'
 # output_root (currently runs/vla_ablation_flip_norm065/). Override if needed.
-# RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_flip_norm065"}
-RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_fm"}
+RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_rlds"}
+# RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_fm"}
 
 # ── Conda / Python env ─────────────────────────────────────────────────
-CONDA_ENV=${CONDA_ENV:-"/workspace/tingting/envs/vlmbench"}   # set "" to skip activation
+CONDA_ENV=${CONDA_ENV:-"/workspace/tingting/envs/vlmbench-rlds"}   # set "" to skip activation
 # Make the VLM4VLA repo root importable (fixes `ModuleNotFoundError: No module named 'eval'`)
 export PYTHONPATH="${VLM4VLA_ROOT}${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}                # live stdout flushing
@@ -60,12 +61,16 @@ export MUJOCO_EGL_DEVICE_ID=${MUJOCO_EGL_DEVICE_ID:-$CUDA_DEVICE}  # only used w
 # ── Eval hyperparameters ───────────────────────────────────────────────
 EXECUTE_STEP=${EXECUTE_STEP:-1}
 NUM_TRIALS=${NUM_TRIALS:-10}                                  # episodes per task
+# Override per-suite max rollout steps. Empty = keep suite defaults
+# (spatial=220, object=280, goal=300, libero_10=520, libero_90=400).
+# Set e.g. MAX_STEPS=400 to give the policy more time; unset to revert.
+MAX_STEPS=${MAX_STEPS:-""}
 # Default ON: configs now train with image_aug=true (0.9 resized crop) on both
 # train and val splits, so eval must apply the matching 0.9 CENTER crop. Set
 # CENTER_CROP=False only to eval an OLD checkpoint trained without any crop.
 CENTER_CROP=${CENTER_CROP:-True}
 # Restrict to specific task ids, comma-separated (e.g. "0,1"). Empty = all tasks.
-TASK_IDS=${TASK_IDS:-"0,1"}
+TASK_IDS=${TASK_IDS:-""}
 # Which experiments to run when first arg is empty (space-separated).
 EXPS=${EXPS:-""}
 # Which suites to run when no suite arg is given (space-separated).
@@ -75,7 +80,7 @@ read -r -a TASK_SUITES <<< "$TASK_SUITES_STR"
 
 # ── wandb (live success-rate logging) ──────────────────────────────────
 USE_WANDB=${USE_WANDB:-1}                                     # 1 to enable
-WANDB_PROJECT=${WANDB_PROJECT:-vla_eval_no_center_crop}
+WANDB_PROJECT=${WANDB_PROJECT:-vla_eval_l1loss}
 
 # ── Misc ───────────────────────────────────────────────────────────────
 DRY_RUN=${DRY_RUN:-0}
@@ -152,6 +157,10 @@ run_eval() {
 
     if [ -n "$TASK_IDS" ]; then
         cmd="$cmd --task_ids $TASK_IDS"
+    fi
+
+    if [ -n "$MAX_STEPS" ]; then
+        cmd="$cmd --max_steps_override $MAX_STEPS"
     fi
 
     if [ "$USE_WANDB" = "1" ]; then
