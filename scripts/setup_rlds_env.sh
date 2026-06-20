@@ -61,4 +61,24 @@ $PIP install "timm==1.0.27"
 #     'omegaconf'.
 $PIP install "omegaconf==2.3.1"
 
+# 14) vlm4vla backbone/runtime deps pulled in by main.py's import chain
+#     (model builders, video/image utils). Missing from the --no-deps installs
+#     above; surfaced when launching real training via run_vla_ablation.sh.
+$PIP install \
+    "qwen-vl-utils==0.0.14" \
+    "diffusers==0.38.0" \
+    "open_clip_torch==2.20.0" \
+    "flamingo-pytorch==0.1.2" \
+    "hydra-core==1.3.3" \
+    "decord==0.6.0" \
+    "accelerate==1.14.0"
+
+# 15) flash-attn 2.8.3 — vlm_builder.py hardcodes attn_implementation=
+#     "flash_attention_2". MUST match the working vlmbench (HDF5) env's
+#     flash-attn 2.8.3 so the RLDS run is a true parity reference. The source
+#     build fails here; use the official prebuilt wheel for cp311 / torch2.7 /
+#     cu12. ABI variant = abiTRUE because torch._C._GLIBCXX_USE_CXX11_ABI is True.
+$PIP install --no-deps \
+    "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3%2Bcu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl"
+
 echo "[setup_rlds_env] done. Prefix: $ENV_PREFIX"
