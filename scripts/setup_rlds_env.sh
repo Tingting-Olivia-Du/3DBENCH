@@ -100,4 +100,8 @@ $PIP install \
     "easydict" "egl_probe" "glfw==2.10.0" "thop==0.1.1-2209072238" "cloudpickle"
 $PIP install "numpy==1.26.4" "opencv-python==4.6.0.66"
 
+# 18) Extra eval-only deps imported transitively by eval/libero/* (pose math,
+#     LIBERO env base classes). Surfaced when launching run_libero_eval.py.
+$PIP install "transforms3d==0.4.2" "future==1.0.0" "gym==0.26.2"
+
 echo "[setup_rlds_env] done. Prefix: $ENV_PREFIX"
