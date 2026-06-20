@@ -81,4 +81,23 @@ $PIP install \
 $PIP install --no-deps \
     "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3%2Bcu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl"
 
+# 16) LIBERO simulator — ONLY needed for closed-loop eval (run_libero_eval.py:
+#     `from libero.libero import benchmark`), NOT for RLDS training. The local
+#     LIBERO repo is missing its top-level package __init__.py, so find_packages()
+#     returns nothing and the editable install is an empty 5KB shell. Create the
+#     (empty) __init__.py first, then install --no-deps (its requirements.txt
+#     pins numpy 1.22 / transformers 4.21 which would wreck this env).
+LIBERO_ROOT=/workspace/tingting/LIBERO
+touch "$LIBERO_ROOT/libero/__init__.py"
+$PIP install --no-deps -e "$LIBERO_ROOT"
+
+# 17) LIBERO runtime sim deps, versions matched to the working vlmbench env.
+#     CAUTION: robosuite/robomimic/numba pull numpy>=2 and a newer opencv, which
+#     break the TF 2.15 stack (needs numpy<2). Re-pin numpy 1.26.4 + opencv
+#     4.6.0.66 AFTER installing them so the RLDS data path keeps working.
+$PIP install \
+    "robosuite==1.4.0" "robomimic==0.2.0" "bddl==1.0.1" "mujoco==3.8.0" \
+    "easydict" "egl_probe" "glfw==2.10.0" "thop==0.1.1-2209072238" "cloudpickle"
+$PIP install "numpy==1.26.4" "opencv-python==4.6.0.66"
+
 echo "[setup_rlds_env] done. Prefix: $ENV_PREFIX"
