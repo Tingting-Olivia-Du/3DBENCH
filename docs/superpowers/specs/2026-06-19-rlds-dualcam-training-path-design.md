@@ -183,4 +183,23 @@ A new env has different TF/torch build resolution than `vlmbench`. If RLDS train
 fine but HDF5 evals ≈0, the gap could be the **data path** *or* the
 **env/version delta**. Mitigation: keep torch/transformers/lightning pinned
 identical to `vlmbench`; if numpy<2 forces a torch rebuild, record the exact
-versions so the confound is documented, not hidden.
+versions so the confound is documented, not hidden. (Implemented: env keeps
+torch 2.7.1 / transformers 5.8.0 / lightning 2.6.5, and flash-attn 2.8.3 matches
+`vlmbench` so both runs use the same `flash_attention_2`.)
+
+## Known RLDS↔HDF5 differences (post-implementation, verified)
+
+These are the *only* divergences between the two paths besides the data source
+itself — all intended or benign for the train-time data-vs-model comparison:
+
+- **Val-split crop asymmetry.** The openvla RLDS pipeline gates *all* image
+  augmentation (incl. resized-crop) on `train` (`rlds/dataset.py:498`), so the
+  RLDS **val** split does decode+resize only — **no crop**. The HDF5 val split
+  (`libero_hdf5_dataset.py:192-194`, `image_aug=True`) applies a center 0.9
+  crop. Both configs set `val_dataset.image_aug: true`. This is **val-only**,
+  and val is already decoupled from sim eval, so it does **not** confound the
+  train-time comparison. Noted, not fixed.
+- **Train path parity holds:** q99 action normalization, gripper convention
+  (`+1=open, 0=close`), resized-crop, and image orientation (both upright; RLDS
+  adds no flip) all match. The dual-cam wiring is `use_hand_rgb`-gated with no
+  KeyError/None path; the single-view default path is byte-for-byte unchanged.
