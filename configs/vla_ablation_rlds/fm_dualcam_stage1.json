@@ -174,9 +174,10 @@
     "_ablation_meta": {
         "experiment_id": "e0",
         "dimension": "vanilla",
-        "strategy": "full",
-        "label": "vanilla (no LoRA) | dual-camera (agent+wrist) | dualcam bs256 4gpu cosine",
-        "note": "dual-camera + 4-GPU eff_batch=8*8*4=256 (bs lowered 16->8 to fit dual-cam VRAM), lr=8e-5, cosine, warmup 800"
+        "strategy": "head",
+        "label": "two-stage FM stage1 | dual-camera (agent+wrist) | FMDecoder flow-matching",
+        "note": "two-stage flow-matching stage1: lr=2e-5, cosine, warmup 1000, head-only (freeze VLM, train FMDecoder)",
+        "action_head": "FMDecoder"
     },
     "scheduler": "cosine",
     "resume_pretrain": false
