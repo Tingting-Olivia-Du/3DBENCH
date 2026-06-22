@@ -81,7 +81,7 @@ stage2 config (model_load_path=stage1 ckpt, resume_pretrain=true, resume=null)
 "task_name": "vla_two_stage_fm_stage1",
 "learning_rate": 2e-05,
 "warmup_steps": 1000,
-"arm_gripper_loss_ratio": 0.01,         // FM 路径 gripper loss 走 detach，沿用 fm 配置
+"arm_gripper_loss_ratio": 1,            // 对 FM 路径无效（见 §6.1）；保留默认值，不写 0.01
 "train_setup": {
   "freeze_backbone": true,
   "train_vision": false,
@@ -110,7 +110,7 @@ stage2 config (model_load_path=stage1 ckpt, resume_pretrain=true, resume=null)
 "task_name": "vla_two_stage_fm_stage2",
 "learning_rate": 8e-05,
 "warmup_steps": 800,
-"arm_gripper_loss_ratio": 0.01,
+"arm_gripper_loss_ratio": 1,            // 同 stage1，对 FM 路径无效（见 §6.1）
 "train_setup": {
   "freeze_backbone": false,
   "train_vision": true,
@@ -183,6 +183,32 @@ def _gripper_to_unit(g):         # [-1,1] -> [0,1]
 ```
 
 结果：FMDecoder 内部 7 维全为 [-1,1] 连续量，velocity 场同质；对外接口（dataloader 给 {0,1}、推理返回 {0,1}）完全不变。
+
+### 6.1 FMDecoder loss 算法与 `arm_gripper_loss_ratio` 失效说明
+
+FMDecoder 是 flow-matching，loss 与 arm/gripper 的拆分无关（`fm_decoder.py:249-263`）：
+
+```python
+def loss(self, pred_action, labels, attention_mask=None):
+    target_bt = self._last_velocity            # forward 时缓存的 velocity = actions - noise
+    loss = ((pred_bt - target_bt) ** 2).mean() # 对全 7 维一起做 MSE
+    return {"loss_arm": loss,                  # 整个 loss 塞进 loss_arm（复用接线）
+            "loss_gripper": torch.tensor(0.0), # 恒为 0，纯占位
+            "acc_gripper": -1.0}
+```
+
+即：单一 velocity MSE，在全部 7 维上同时算（arm 6 维 + gripper 1 维不分家）。
+
+经 trainer `_get_loss`（`base_trainer.py:278-284`）确认 `arm_gripper_loss_ratio` 对 FM 路径**无效**：
+
+| `loss_type` | 实际计算 | ratio 是否生效 |
+|---|---|---|
+| `l1_unified`（启动脚本默认 `LOSS_TYPE=l1_unified`） | `loss = loss_arm_act`（FM 的 7 维 MSE） | 否，整条分支不读 ratio |
+| `split_bce` | `loss = loss_arm_act + loss_gripper_act × ratio` | 读，但 `loss_gripper_act ≡ 0`，乘任何数恒为 0 |
+
+因此本设计**不依赖也不调** `arm_gripper_loss_ratio`，配置中保留为默认 `1`（无害）。
+
+**为何选项 A（无 per-dim 加权）成立**：FM 是全 7 维无差别 MSE，gripper 维必须与 arm 维同尺度，否则其在总 MSE 中的权重失衡。§6 的 gripper {0,1}→{-1,+1} 同质化正是让 gripper 落到与 arm 相同的 [-1,1] 区间，使无差别 MSE 公平。同质化之后无需再做逐维加权。若日后发现 gripper 学习不足，正确旋钮是在 `FMDecoder.loss` 内做逐维加权（而非死参数 `arm_gripper_loss_ratio`）——本次不实现（YAGNI）。
 
 ## 7. 归一化说明（澄清，无需新增逻辑）
 
