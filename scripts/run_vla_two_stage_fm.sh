@@ -34,14 +34,15 @@ export WANDB_PROJECT=${WANDB_PROJECT:-vla_two_stage_fm}
 
 run_main() {
     local config_path="$1"
-    local cmd="cd $VLM4VLA_ROOT && torchrun \
-        --nnodes $NUM_NODES --node_rank 0 --nproc_per_node $GPUS_PER_NODE \
-        --master_addr 127.0.0.1 --master_port $MASTER_PORT \
-        main.py $config_path --gpus $GPUS_PER_NODE --num_nodes $NUM_NODES --loss_type $LOSS_TYPE"
     if [ "${DRY_RUN:-0}" = "1" ]; then
-        echo "[DRY RUN] $cmd"
+        printf '[DRY RUN] cd %s && torchrun --nnodes %s --node_rank 0 --nproc_per_node %s --master_addr 127.0.0.1 --master_port %s main.py %s --gpus %s --num_nodes %s --loss_type %s\n' \
+            "$VLM4VLA_ROOT" "$NUM_NODES" "$GPUS_PER_NODE" "$MASTER_PORT" \
+            "$config_path" "$GPUS_PER_NODE" "$NUM_NODES" "$LOSS_TYPE"
     else
-        eval "$cmd"
+        cd "$VLM4VLA_ROOT" && torchrun \
+            --nnodes "$NUM_NODES" --node_rank 0 --nproc_per_node "$GPUS_PER_NODE" \
+            --master_addr 127.0.0.1 --master_port "$MASTER_PORT" \
+            main.py "$config_path" --gpus "$GPUS_PER_NODE" --num_nodes "$NUM_NODES" --loss_type "$LOSS_TYPE"
     fi
 }
 
@@ -68,6 +69,7 @@ run_stage2() {
 
     # Generate a temp stage2 config with model_load_path filled in (do not mutate the original).
     local tmp_cfg="$TMPDIR/fm_dualcam_stage2.filled.$$.json"
+    trap 'rm -f "$tmp_cfg"' RETURN
     if [ "${DRY_RUN:-0}" = "1" ] && [ -z "$ckpt" ]; then
         ckpt="DRY_RUN_PLACEHOLDER.ckpt"
     fi
@@ -81,7 +83,6 @@ json.dump(c, open(os.environ['DST'], 'w'), indent=4, ensure_ascii=False)
 "
     echo "  filled config: $tmp_cfg"
     run_main "$tmp_cfg"
-    rm -f "$tmp_cfg"
 }
 
 case "$STAGE" in
