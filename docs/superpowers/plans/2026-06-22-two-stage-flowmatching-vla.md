@@ -754,3 +754,9 @@ cd /workspace/tingting/3DBENCH && CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 \
 **Placeholder scan：** stage2 配置的 `model_load_path` 在 Task 3 显式置为 `RUNTIME_FILLED_BY_SCRIPT` 占位、Task 4 脚本运行时用 jq 填真实路径、Task 5 冒烟用 jq 填——三处一致，非 plan 占位。无 TODO/TBD。
 
 **Type consistency：** `_gripper_to_continuous`/`_gripper_to_unit` 在 Task 1 定义并在 forward/get_labels/predict 调用，名称一致。`resume_pretrain`/`model_load_path`/`model_load_source=lightning`/`resume=null` 在 Task 2(校验)、Task 3(配置)、Task 4(脚本填)、Task 5(冒烟)中名称一致。
+
+## smoke (GPU6) 2026-06-22T06:09:38Z
+stage1 freeze: backbone 0.00M trainable, act_head 434.26M trainable (from log)
+stage2 resume_pretrain: 3 occurrences in log; <All keys matched successfully>
+stage1 loss: 1.212 (step 20); stage2 loss: 1.208 (step 20)
+stage2 checkpoint save: FAILED (OSError ENOSPC during lightning save_last after training completed)
