@@ -47,7 +47,16 @@ run_main() {
 }
 
 latest_ckpt() {
-    ls -t "$STAGE1_CKPT_DIR"/*.ckpt 2>/dev/null | head -n 1
+    # main.py nests ckpts under output_root/<model>/<task>/<date>/<exp_name>/,
+    # so search recursively (not a flat glob). Prefer last.ckpt (Lightning's
+    # always-current symlink); fall back to the newest *.ckpt by mtime.
+    local last
+    last="$(find "$STAGE1_CKPT_DIR" -name 'last.ckpt' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2-)"
+    if [ -n "$last" ]; then
+        echo "$last"
+        return
+    fi
+    find "$STAGE1_CKPT_DIR" -name '*.ckpt' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2-
 }
 
 run_stage1() {
