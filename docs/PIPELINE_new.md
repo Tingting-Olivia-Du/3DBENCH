@@ -4,7 +4,88 @@
 
 ```bash
 cd 3DBENCH
+
 conda activate /workspace/tingting/envs/vlmbench
+
+conda deactivate
+conda activate /workspace/tingting/envs/vlmbench-rlds
+
+ENV_PREFIX=/workspace/tingting/envs/vlmbench-rlds
+
+cd /workspace/tingting/3DBENCH
+
+
+cd /workspace/tingting/3DBENCH
+CONFIG_DIR=$PWD/configs/vla_ablation_rlds 
+
+CUDA_VISIBLE_DEVICES=4 \
+bash scripts/run_vla_ablation.sh e0_full_dualcam_bs256
+
+
+CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 \
+  bash scripts/run_vla_two_stage_fm.sh
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 GPUS_PER_NODE=4 \
+  STAGE=stage2 \
+  bash scripts/run_vla_two_stage_fm.sh
+
+
+
+CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 MASTER_PORT=6072 \
+bash scripts/run_vla_ablation.sh e0_full_dualcam_bs256
+
+
+CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 MASTER_PORT=6057 \
+  bash scripts/run_vla_ablation.sh e0_full_dualcam_bs256
+
+
+
+CUDA_DEVICE=1 \
+CKPT_PATH=/workspace/tingting/VLM4VLA/runs/vla_two_stage_fm/stage2_lora/checkpoints/qwen25vl/vla_two_stage_fm_stage2/2026-06-25/vla_two_stage_fm_stage2_Qwen2.5-VL-3B-Instruct-bs256-lr8e-05-ws1-FMDecoder-latent1/best-val-2-4001-0.2181.ckpt \
+USE_WANDB=0 \
+NUM_TRIALS=10 \
+TASK_IDS=2,3 \
+EXECUTE_STEP=4 \
+bash scripts/run_vla_ablation_eval.sh fm_dualcam_stage2_lora libero_10
+
+CKPT_PATH="/workspace/tingting/VLM4VLA/runs/vla_two_stage_fm/stage2/checkpoints/qwen25vl/vla_two_stage_fm_stage2/2026-06-24/vla_two_stage_fm_stage2_Qwen2.5-VL-3B-Instruct-bs256-lr8e-05-ws1-FMDecoder-latent1/epoch=15-step=24000.ckpt" \
+CUDA_DEVICE=2 \
+bash scripts/run_vla_ablation_eval.sh fm_dualcam_stage2_lora libero_10
+
+
+
+CKPT="/workspace/tingting/VLM4VLA/runs/vla_ablation_rlds/e0_full_dualcam_bs256/checkpoints/qwen25vl/vla_ablation_e0_full_dualcam_bs256_rlds/2026-06-20/vla_ablation_e0_full_dualcam_bs256_rlds_Qwen2.5-VL-3B-Instruct-bs256-lr8e-05-ws1-FCDecoder-latent1/epoch=31-step=50000.ckpt"
+LIBERO_USE_TRAIN_INIT=1 EXECUTE_STEP=1 NUM_TRIALS=5 TASK_IDS=0 USE_WANDB=0 CUDA_DEVICE=3 MUJOCO_GL=osmesa \
+CKPT_PATH="$CKPT" \
+  bash scripts/run_vla_ablation_eval.sh e0_full_dualcam_bs256 libero_10 
+
+cd /workspace/tingting/3DBENCH
+CUDA_VISIBLE_DEVICES=7 MASTER_PORT=6056 bash scripts/run_vla_ablation.sh e0_full_dualcam
+
+
+
+cd /workspace/tingting/3DBENCH
+CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 MASTER_PORT=6055 \
+  bash scripts/run_vla_ablation.sh e0_full_bs256
+
+
+
+cd /workspace/tingting/3DBENCH
+CUDA_VISIBLE_DEVICES=6,7 GPUS_PER_NODE=2 MASTER_PORT=6054 \
+  bash scripts/run_vla_ablation.sh e0_full_bs256
+
+
+
+cd /workspace/tingting/3DBENCH
+CUDA_VISIBLE_DEVICES=4,5,6,7 GPUS_PER_NODE=4 MASTER_PORT=6053 \
+  bash scripts/run_vla_ablation.sh e0_full_bs256_4gpu
+
+
+cd /workspace/tingting/3DBENCH
+CUDA_VISIBLE_DEVICES=6,7 GPUS_PER_NODE=2 MASTER_PORT=6052 \
+  bash scripts/run_vla_ablation.sh e0_full_bs128_2gpu
+
+
 
 
 

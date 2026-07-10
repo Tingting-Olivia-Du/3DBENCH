@@ -8,7 +8,7 @@
 #   # Single experiment on all suites, GPU 6, osmesa rendering
 #   CUDA_DEVICE=6 MUJOCO_GL=osmesa bash scripts/run_vla_ablation_eval.sh e0_full
 #   CUDA_DEVICE=7 bash scripts/run_vla_ablation_eval.sh e0_full_dualcam_bs256
-
+# bash scripts/run_vla_ablation_eval.sh vla_two_stage_fm
 #   # One suite only, with live wandb success-rate curves
 #   USE_WANDB=1 bash scripts/run_vla_ablation_eval.sh e0_full libero_10
 #
@@ -38,7 +38,7 @@ RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_rlds"}
 # RESULTS_DIR=${RESULTS_DIR:-"$PROJECT_ROOT/results/vla_ablation_fm"}
 # Subdir under VLM4VLA/runs/ holding the checkpoints. Must match the configs'
 # output_root (currently runs/vla_ablation_flip_norm065/). Override if needed.
-RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_rlds"}
+RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_two_stage_fm"}
 # RUNS_SUBDIR=${RUNS_SUBDIR:-"vla_ablation_fm"}
 
 # ── Conda / Python env ─────────────────────────────────────────────────
@@ -48,7 +48,7 @@ export PYTHONPATH="${VLM4VLA_ROOT}${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}                # live stdout flushing
 
 # ── GPU ────────────────────────────────────────────────────────────────
-CUDA_DEVICE=${CUDA_DEVICE:-7}
+CUDA_DEVICE=${CUDA_DEVICE:-2}
 
 # ── Rendering backend (MuJoCo / robosuite headless) ───────────────────
 # osmesa = CPU software GL (most portable, slower); egl = headless GPU GL;
@@ -60,7 +60,7 @@ export MUJOCO_EGL_DEVICE_ID=${MUJOCO_EGL_DEVICE_ID:-$CUDA_DEVICE}  # only used w
 
 # ── Eval hyperparameters ───────────────────────────────────────────────
 EXECUTE_STEP=${EXECUTE_STEP:-1}
-NUM_TRIALS=${NUM_TRIALS:-10}                                  # episodes per task
+NUM_TRIALS=${NUM_TRIALS:-50}                                  # episodes per task
 # Override per-suite max rollout steps. Empty = keep suite defaults
 # (spatial=220, object=280, goal=300, libero_10=520, libero_90=400).
 # Set e.g. MAX_STEPS=400 to give the policy more time; unset to revert.
@@ -102,6 +102,7 @@ find_checkpoint() {
     # Find the latest checkpoint for an experiment.
     # An explicit CKPT_PATH env var overrides the auto-discovery entirely.
     local exp_name="$1"
+    local config_path="${2:-}"
 
     # 1) Manual override: CKPT_PATH=/abs/path/to/epoch=22-step=50000.ckpt
     if [ -n "${CKPT_PATH:-}" ]; then
@@ -109,19 +110,47 @@ find_checkpoint() {
         return
     fi
 
-    local ckpt_root="$VLM4VLA_ROOT/runs/${RUNS_SUBDIR}/${exp_name}/checkpoints"
+    # 2) Preferred: derive the ckpt root from the config's own `output_root`
+    # (relative to VLM4VLA root). This is the source of truth — main.py writes
+    # checkpoints under it — and it handles experiments whose output_root does
+    # NOT follow the runs/$RUNS_SUBDIR/$exp_name convention (e.g. two-stage runs
+    # like fm_dualcam_stage2 -> runs/vla_two_stage_fm/stage2/checkpoints).
+    local ckpt_root=""
+    if [ -n "$config_path" ] && [ -f "$config_path" ]; then
+        local output_root
+        output_root=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('output_root',''))" "$config_path" 2>/dev/null)
+        if [ -n "$output_root" ]; then
+            # output_root is relative to VLM4VLA root (e.g. runs/.../checkpoints).
+            case "$output_root" in
+                /*) ckpt_root="$output_root" ;;
+                *)  ckpt_root="$VLM4VLA_ROOT/$output_root" ;;
+            esac
+        fi
+    fi
+
+    # 3) Fallback: the legacy runs/$RUNS_SUBDIR/$exp_name/checkpoints template
+    # (kept for backward compatibility with existing single-stage experiments).
+    if [ -z "$ckpt_root" ] || [ ! -d "$ckpt_root" ]; then
+        ckpt_root="$VLM4VLA_ROOT/runs/${RUNS_SUBDIR}/${exp_name}/checkpoints"
+    fi
 
     if [ ! -d "$ckpt_root" ]; then
         echo ""
         return
     fi
 
-    # 2) Auto: pick the most recently *modified* .ckpt (by mtime, not filename).
+    # Auto: pick the most recently *modified* .ckpt (by mtime, not filename).
     # Sorting by filename is wrong because e.g. "epoch=22-..." < "epoch=3-..."
     # as strings, so a plain `sort | tail -1` would pick the older checkpoint.
+    # Skip last.ckpt so we prefer the explicit epoch/step checkpoint.
     local latest
-    latest=$(find "$ckpt_root" -name "*.ckpt" -type f -printf '%T@ %p\n' 2>/dev/null \
+    latest=$(find "$ckpt_root" -name "*.ckpt" -type f ! -name "last.ckpt" -printf '%T@ %p\n' 2>/dev/null \
              | sort -n | tail -1 | cut -d' ' -f2-)
+    if [ -z "$latest" ]; then
+        # nothing but last.ckpt — fall back to it
+        latest=$(find "$ckpt_root" -name "*.ckpt" -type f -printf '%T@ %p\n' 2>/dev/null \
+                 | sort -n | tail -1 | cut -d' ' -f2-)
+    fi
     echo "$latest"
 }
 
@@ -131,7 +160,7 @@ run_eval() {
     local config_path="$CONFIG_DIR/${exp_name}.json"
 
     local ckpt_path
-    ckpt_path=$(find_checkpoint "$exp_name")
+    ckpt_path=$(find_checkpoint "$exp_name" "$config_path")
 
     if [ -z "$ckpt_path" ]; then
         echo "[SKIP] $exp_name: no checkpoint found"

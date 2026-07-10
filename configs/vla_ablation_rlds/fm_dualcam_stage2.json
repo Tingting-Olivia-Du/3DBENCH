@@ -22,11 +22,11 @@
     "cap_loss_ratio": 0.05,
     "fwd_loss_ratio": 0,
     "seed": 123,
-    "batch_size": 8,
+    "batch_size": 16,
     "num_workers": 4,
     "data_scale": 1,
     "optimizer": "adam",
-    "learning_rate": 8e-05,
+    "learning_rate": 1e-05,
     "min_lr_scale": 0.01,
     "weight_decay": 0,
     "warmup_epochs": 0,
@@ -63,12 +63,13 @@
         "mm_use_im_start_end": false,
         "mm_use_im_patch_token": false,
         "gradient_checkpointing": false,
-        "lora_enable": false,
+        "lora_enable": true,
         "mm_projector_lr": 0.0001,
         "lora_r": 64,
         "lora_alpha": 16,
         "lora_dropout": 0.05,
         "lora_bias": "none",
+        "lora_target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         "train_text_embedding": true
     },
     "vision_resampler": {
@@ -109,7 +110,7 @@
             "output_dim": 1024
         },
         "add_pos_embed": true,
-        "num_inference_timesteps": 20,
+        "num_inference_timesteps": 50,
         "num_timestep_buckets": 1000,
         "noise_beta_alpha": 1.5,
         "noise_beta_beta": 1.0,
@@ -145,7 +146,7 @@
         "val_check_interval": 8000,
         "check_val_every_n_epoch": null,
         "max_steps": 50000,
-        "accumulate_grad_batches": 8
+        "accumulate_grad_batches": 4
     },
     "train_dataset": {
         "type": "OpenVLADataset",

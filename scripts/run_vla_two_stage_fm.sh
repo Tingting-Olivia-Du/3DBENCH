@@ -16,8 +16,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"               # 3DBENCH/
 VLM4VLA_ROOT="$(dirname "$PROJECT_ROOT")/VLM4VLA"     # VLM4VLA/
 CONFIG_DIR="$PROJECT_ROOT/configs/vla_ablation_rlds"
 
-STAGE1_CFG="$CONFIG_DIR/fm_dualcam_stage1.json"
-STAGE2_CFG="$CONFIG_DIR/fm_dualcam_stage2.json"
+STAGE1_CFG="${STAGE1_CFG:-$CONFIG_DIR/fm_dualcam_stage1.json}"
+STAGE2_CFG="${STAGE2_CFG:-$CONFIG_DIR/fm_dualcam_stage2.json}"
 STAGE1_CKPT_DIR="$VLM4VLA_ROOT/runs/vla_two_stage_fm/stage1/checkpoints"
 
 GPUS_PER_NODE=${GPUS_PER_NODE:-1}

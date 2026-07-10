@@ -1,0 +1,76 @@
+# Stage-1 VLM fine-tune (3D capability transfer) — base config.
+# Variant/steps overridden per run via CLI dotlist (see run_stage1_smoke.sh).
+# Rationale for the non-obvious values: 3dvla-data/DATA_SPEC.md 全局不变量.
+
+run_id: stage1_smoke
+run_root_dir: /workspace/tingting/3dvla-checkpoints
+seed: 42
+wandb_entity: tingtingdu06-uw-madison
+wandb_project: 3dvlm
+is_debug: false
+version_id: "0.21"
+
+framework:
+  name: QwenFast              # action_model is a parameter-free FAST wrapper;
+                              # trainable graph == vanilla Qwen3-VL (verified)
+  qwenvl:
+    base_vlm: Qwen/Qwen3-VL-4B-Instruct   # PLAIN instruct — not the -Action ckpt
+    attn_implementation: flash_attention_2
+  action_model:
+    action_model_type: FAST
+    action_dim: 7
+    action_horizon: 16        # unused in VLM-only training; required by __init__
+  reduce_in_full_precision: true
+
+datasets:
+  vlm_data:
+    dataset_py: vlm_datasets_3d       # [3DVLA] materialized mixture + focal unify
+    dataset_use: materialized_mixture # log label only in this path
+    annotation_path: /workspace/tingting/3dvla-data/sft/materialized/full_smoke5000.jsonl
+    model_type: qwen3vl
+    model_max_length: 8192      # dry-run p100 = 2,566; headroom, no truncation
+    max_pixels: 1254400         # loader contract: >= LIBERO-wrist F=600 unified
+                                # 1232x924 (see vlm_datasets_3d.REQUIRED_MAX_PIXELS)
+    min_pixels: 784
+    video_min_pixels: 784       # video path unused (multi-frame goes as images)
+    video_max_pixels: 401408
+    video_min_frames: 4
+    video_max_frames: 32
+    video_fps: 1
+    data_flatten: false
+    per_device_batch_size: 2
+    num_workers: 4
+
+trainer:
+  max_train_steps: 100
+  num_warmup_steps: 10
+  save_interval: 100
+  eval_interval: 1000000000     # eval_action_model is a no-op for VLM-only
+  logging_frequency: 10
+  learning_rate:
+    base: 1.0e-05
+  lr_scheduler_type: cosine_with_min_lr
+  scheduler_specific_kwargs:
+    min_lr: 1.0e-06
+  freeze_modules: ''
+  loss_scale:
+    vlm: 1.0
+  max_grad_norm: 1.0
+  weight_decay: 0.0
+  gradient_clipping: 1.0
+  # DEAD FIELD in the DeepSpeed path — the engine reads accumulation ONLY from
+  # the ds_config JSON (train/ds_config_stage1*.json, wired via ACCEL_CONFIG).
+  # Kept at 1 so accelerate's display never double-applies. See docs §7.
+  gradient_accumulation_steps: 1
+  save_format: safetensors
+  # 全状态快照开关（无缝续训：优化器动量+调度器+RNG+数据位置）。
+  # 代价 ~60G/份（自动轮转只留最新，存前有 70G 余量检查，不足则跳过不崩）。
+  # true = 中断可无缝续（--trainer.resume_state <state_dir>）；false = 只存权重。
+  save_resume_state: true
+  resume_state_min_free_gb: 70
+
+  optimizer:
+    name: AdamW
+    betas: [0.9, 0.95]
+    eps: 1.0e-08
+    weight_decay: 1.0e-08

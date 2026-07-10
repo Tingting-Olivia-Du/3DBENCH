@@ -22,7 +22,7 @@
     "cap_loss_ratio": 0.05,
     "fwd_loss_ratio": 0,
     "seed": 123,
-    "batch_size": 8,
+    "batch_size": 32,
     "num_workers": 4,
     "data_scale": 1,
     "optimizer": "adam",
@@ -145,7 +145,7 @@
         "val_check_interval": 8000,
         "check_val_every_n_epoch": null,
         "max_steps": 5000,
-        "accumulate_grad_batches": 8
+        "accumulate_grad_batches": 1
     },
     "train_dataset": {
         "type": "OpenVLADataset",
